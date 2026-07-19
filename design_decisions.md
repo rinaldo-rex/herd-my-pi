@@ -338,6 +338,13 @@ interactive pi you can drive by hand, and the `★`-main is just a labeled pane.
 Cost: a few `pane run` calls per push/pull and a small file write per
 heartbeat — trivial.
 
+> **Refined by [D26](#d26-state-model--statejson-stores-herd-unique-fields-only-widget-joins-herdr-pane-list-live):**
+> `state.json` stores **herd-unique fields only** (model/thinking/name/git-
+> state/timing/is-main); presence/`agent_status`/`cwd`/session path come **live
+> from `herdr pane list`** at render time, and the widget JOINs the two by
+> `paneId`. The shared-file channel stays; it just carries less, and nothing
+> goes stale.
+
 ---
 
 ## D16. Busy-target push — queue by default, `--force` interrupts
@@ -554,3 +561,35 @@ in Phase 2 (chosen); full worktree feature in Phase 1.
 + a hybrid roster source. The minimal cut captures the value (safe parallel
 prototyping + wt-as-a-dev-tool) at low cost; the lifecycle verbs are thin
 `wt merge`/`wt remove` wrappers that fit naturally in Phase 2's polish scope.
+
+---
+
+## D26. State model — `state.json` stores herd-unique fields only; widget JOINs `herdr pane list` live
+
+**Decision:** herd's shared `.pi/herd/state.json` stores **only** the fields
+herdr's own pane registry doesn't already track live: `paneId, name, type,
+workspaceId, model, thinking, workingTree, branch, worktreePath,
+lastActivityMs, startedMs, isMain`. Presence, `agent_status`, `cwd`, session
+path, `focused`, `tab_id` come from `herdr pane list --workspace <id>` at
+render time (always fresh via the local socket). The roster =
+JOIN(`herdr pane list`, `state.json`) ON `paneId`; `readRoster(workspaceId)`
+performs this join.
+
+**Why:** confirmed against `herdr 0.7.4` — `herdr pane get`/`pane list` return
+structured JSON per pane with `agent` (e.g. `"pi"`), `agent_status`
+(`working|idle|blocked|unknown`), `cwd`, `agent_session.value` (the session
+`.jsonl` path), `focused`, `terminal_title`. Duplicating these into state.json
+(original D15) means herd-written copies go stale between heartbeats and need
+reconciliation. Reading herdr live eliminates that: presence is real-time,
+`agent_status` is real, and a pane missing from `pane list` = exited (trivial
+closed-pane detection, replacing heartbeat-based transients). state.json
+shrinks to the herd-unique supplements herdr genuinely can't know
+(model/thinking/name/git-state/timing/is-main).
+
+**Tradeoffs:** + no stale presence/status; + simpler closed-pane handling;
++ smaller state.json / less write contention. − roster read does one socket
+call per refresh (cheap — local unix socket, ms-scale); − `state.ts` depends
+on `herdr.ts` (both foundation modules, acceptable). Amends **D15**.
+
+**Options considered:** keep the full row in state.json (original D15);
+refine to herd-unique + live join (chosen).
