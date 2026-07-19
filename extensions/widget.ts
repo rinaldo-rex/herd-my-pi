@@ -192,6 +192,11 @@ function padVisible(str: string, targetWidth: number): string {
   return str + " ".repeat(padding);
 }
 
+/** Get visible length of a string (without ANSI codes). */
+function visibleLength(str: string): number {
+  return stripAnsi(str).length;
+}
+
 /** Get terminal width, falling back to 80. */
 function getTerminalWidth(): number {
   return process.stdout.columns || 80;
@@ -221,7 +226,9 @@ export function renderWidgetBox(
   const contentLines: string[] = [];
   for (const { formatted } of rows) {
     const padded = padVisible(formatted, innerWidth);
-    contentLines.push(`${BOX.vertical} ${padded} ${BOX.vertical}`);
+    // Build line: │ content │  with borders colored
+    const line = `${BOX.vertical} ${padded} ${BOX.vertical}`;
+    contentLines.push(line);
   }
   
   // Build the footer
@@ -229,9 +236,9 @@ export function renderWidgetBox(
   
   // Combine all lines
   const lines = [
-    themeFg("muted", header),
-    ...contentLines.map(line => themeFg("muted", line.slice(0, 2)) + line.slice(2, -2) + themeFg("muted", line.slice(-2))),
-    themeFg("muted", footer),
+    header,
+    ...contentLines,
+    footer,
   ];
   
   return lines;
@@ -256,8 +263,8 @@ export function renderEmptyBox(
   const footer = `${BOX.bottomLeft}${BOX.horizontal.repeat(innerWidth)}${BOX.bottomRight}`;
   
   return [
-    themeFg("muted", header),
+    header,
     content,
-    themeFg("muted", footer),
+    footer,
   ];
 }
