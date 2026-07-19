@@ -32,6 +32,9 @@ The closed herd loop. Track progress here.
 - [ ] Name collision → error by default (configurable auto-suffix)
 - [ ] Ready-delay knob reuse (PI_SUBAGENT_SHELL_READY_DELAY_MS-style)
 - [ ] Write child's initial state row; auto-enable my widget
+- [ ] `--isolate` flag → run `wt switch -c -x "pi …" herd/<name>` in the new pane
+- [ ] Detect `wt` availability; error clearly if `--isolate` used without `wt`
+- [ ] Spawned agent writes worktree `branch` + `worktreePath` into its state row
 
 ## `/herd-push` + `/herd-receive` (inbound)
 - [ ] `pi.registerCommand("herd-push", ...)`; arg `<name>`; flag `--force`
@@ -56,6 +59,7 @@ The closed herd loop. Track progress here.
 - [ ] `prompts/compact-for-prototype.md`
 - [ ] `prompts/compact-for-review.md`
 - [ ] `prompts/compact-for-handoff.md`
+- [ ] `prompts/compact-for-variants.md` (parallel-prototype spawn-plan template)
 - [ ] `agents/explorer.md` (model+thinking frontmatter)
 - [ ] `agents/debugger.md`
 - [ ] `agents/prototyper.md`
@@ -63,6 +67,7 @@ The closed herd loop. Track progress here.
 
 ## Validation / integration
 - [ ] End-to-end: `/herd-init` → `/herd-new scout` → widget shows scout → `/herd-push scout` → scout receives → `/herd-pull scout` → orchestrator receives
+- [ ] End-to-end isolated: `/herd-new --isolate proto` → wt worktree created on `herd/proto` → roster shows branch → pane runs pi in the worktree
 - [ ] Verify base64 survives `pane run` (multiline/special chars)
 - [ ] Verify `/herd-receive` executes in target even if target is streaming
 - [ ] Verify ★-main marker + current-pane ▶ highlight move on focus change

@@ -36,8 +36,24 @@
 - `/herd-unhide <name>` — restore.
 - Hidden rows tracked per-workspace.
 
+### Worktree lifecycle (create landed in Phase 1; D22/D23/D25)
+- `/herd-merge <name>` — wraps `wt merge` (squash + rebase + fast-forward +
+  remove worktree, with pre-merge hooks as local CI). Resolve `<name>` →
+  `herd/<name>` branch + worktree path from state row; drive `wt merge` with
+  `-y`/`--yes` to avoid interactive hook-approval blocking.
+- `/herd-discard <name>` — wraps `wt remove` (removes worktree + branch).
+- `⊕ N unmerged herd worktrees` badge on every widget, computed from
+  `wt list --format json` filtered to `herd/*` branches with changes or
+  unpushed commits. Replaces herd-side dirty-checking — wt already detects it.
+- Per-role `isolate: true` frontmatter warning: when a role expects isolation
+  but the user spawned without `--isolate`, the child shows a `ctx.ui.notify`
+  at spawn ("role expects isolation; running on shared tree") and a persistent
+  `⚠` marker on that row in every widget.
+- Default in `.pi/herd/config.json`: `worktrees.autoDiscardOnClose = false`
+  (never auto-delete; surface via the badge instead).
+
 ### `compact-for-*` refinements
-- Iterate on the five templates based on real push/pull usage.
+- Iterate on the six templates based on real push/pull usage.
 - Optional: per-template `description` + autocomplete hints polish.
 - Consider a shared `_handoff-skeleton.md` partial if pi prompt templates
   support includes (if not, keep them standalone).
@@ -47,7 +63,6 @@
   tool, no central orchestrator).
 - Optional lead-agent mode.
 - Cross-workspace `--all` roster view.
-- Per-agent working-tree isolation flags.
 
 ## Risks / open impl details
 - Focusing another pane via herdr: confirm the exact `herdr` focus/switch

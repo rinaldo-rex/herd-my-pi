@@ -197,6 +197,83 @@ resolved. Eight genuinely-open product questions surfaced; user addressed all:
 - **Name collisions:** error by default, configurable auto-suffix.
 - **Closed pane:** transient "X exited" then drop.
 
+## Round 7 — worktrees for prototyping (refinement)
+
+A gap surfaced after the v1 docs were written: worktree utilization — especially
+for **prototyping** — was never considered. The `compact-for-prototype` template
+already implies parallel prototyping, and parallel prototyping on a shared tree
+is *exactly* postmortem failure #2 (context bleed). Worktrees are the structural
+fix; the postmortem's failure #5 (orphaned worktree) is the lifecycle trap. So
+worktrees come as a pair: **create-isolated** *and* **reconcile-or-discard**.
+
+Research: [Worktrunk](https://worktrunk.dev/) (`wt`) is a CLI for git worktree
+management *designed for parallel AI agents* — a near-perfect fit. Key findings:
+- `wt switch -c -x "<cmd>" <branch>` creates a worktree and launches a command
+  inside it in one shot → `/herd-new --isolate` becomes a single `wt` call.
+- `worktree-path` is a configurable template (user config or per-project via
+  `[projects."host/owner/repo"]`), overridable per-invocation via `--config-set`
+  or `WORKTRUNK_WORKTREE_PATH`. Default is a sibling dir. → herd doesn't impose a
+  location; it owns a `herd/<name>` branch namespace and respects wt's config.
+- `wt merge` does squash+rebase+ff+remove-worktree with pre-merge hooks (local
+  CI); `wt remove` discards; `wt list --format json` reports every worktree with
+  changes/ahead/behind/unpushed/age.
+
+### Round 7 questions → answers
+1. **When to isolate** → opt-in `--isolate`, PLUS per-role `isolate: true`
+   frontmatter; if a role expects isolation but spawned without `--isolate`, the
+   child warns (notify + widget `⚠`).
+2. **Worktree home** → use `wt`'s configured template (respect user config);
+   herd owns the `herd/<name>` branch namespace; override per-invocation only if
+   needed. (User's instinct to "use wt's default" — formalized.)
+3. **Phasing** → keep in **Phase 3** (user decision; overrides my lean to pull it
+   up). `compact-for-variants` template still ships in Phase 1.
+4. **Ephemeral close** → never auto-delete; `⊕ N unmerged herd worktrees` badge
+   from `wt list --format json`; `/herd-merge`/`/herd-discard` wrap
+   `wt merge`/`wt remove`; default `autoDiscardOnClose=false`.
+5. **Parallel flow** → **option 3 only**: ship `compact-for-variants` as the 6th
+   prompt template (Phase 1); reject the first-class `/herd-variants` fan-out
+   command (it's the sub-agent pattern herd exists to reject, and duplicates wt's
+   own parallel-launch).
+
+### The parallel-flow example that made option 3 click
+
+Scenario: prototype a rate-limiter, 3 approaches (token-bucket / sliding-window /
+Redis). Side-by-side:
+- **Option 3 (template):** run `/compact-for-variants` → orchestrator replies
+  with a menu (A/B/C + goals + branch names) → **you** manually run
+  `/herd-new --isolate prototyper-rl-{a,b,c}`, `/herd-push` each, `/herd-pull`
+  each, then `/herd-merge` the winner + `/herd-discard` the losers. ~9 commands,
+  zero new herd code, human drives every spawn.
+- **Option 2 (command):** one `/herd-variants "…" --count 3` → the **extension**
+  spawns 3 agents and distributes the work → you just review and merge. ~4
+  commands, but herd gains a fan-out code path that either auto-summarizes (= the
+  rejected orchestrator) or barely beats the manual flow — and duplicates `wt`'s
+  own `wt switch -x … -c`.
+
+The crux: option 3 scales the *thinking* without scaling the *machinery*;
+option 2 trades the thesis for convenience. Chose option 3.
+
+### Refinement summary (new/changed)
+- `wt` becomes a runtime dependency (alongside `herdr`) — but only when
+  `--isolate` is used; Phase 1 takes the minimal cut, lifecycle in Phase 2.
+- **Phase 1** gets: `/herd-new --isolate` (wraps `wt switch -c -x`), the spawned
+  agent writes its worktree branch into its state row, and `compact-for-variants`
+  (6th template). Safe parallel prototyping from the MVP.
+- **Phase 2** gets the worktree lifecycle: `/herd-merge <name>` (wraps
+  `wt merge`), `/herd-discard <name>` (wraps `wt remove`), the
+  `⊕ N unmerged herd worktrees` badge (reads `wt list --format json`), and the
+  per-role `isolate: true` warning (notify + widget `⚠`).
+- **Phase 3** drops its worktree-isolation section (moved up); it keeps only
+  cooperative agent-side pull, optional lead-agent mode, cross-workspace `--all`.
+- Remaining gap (now small): Phase 1 isolated agents have no herd-managed
+  cleanup — reconcile with bare `wt merge`/`wt remove` until Phase 2.
+
+See [design_decisions.md](./design_decisions.md) D21–D25 (D25 updated for the
+minimal-cut phasing) and the updated
+[spec/phases/phase-1-closed-loop/](./spec/phases/phase-1-closed-loop/) +
+[spec/phases/phase-2-polish-templates/](./spec/phases/phase-2-polish-templates/) +
+[spec/phases/phase-3-automation-escapes/](./spec/phases/phase-3-automation-escapes/).
+
 ## What's next
 
 The detailed Phase-1 technical plan (module/file layout, herdr CLI surface map,

@@ -17,9 +17,4 @@ Automation escapes. Track progress here. **Only start after Phase 2 is smooth.**
 - [ ] `/herd --all` enumerate panes across all workspaces
 - [ ] Default stays single-workspace
 
-## Per-agent working-tree isolation
-- [ ] `/herd-new --isolate` → spawn into a dedicated git worktree
-- [ ] Roster shows worktree branch per isolated agent
-- [ ] `/herd-merge <name>` reconcile worktree → main
-- [ ] `/herd-discard <name>` drop worktree
-- [ ] Cleanup on close (no orphaned worktrees)
+<!-- Worktree isolation moved up: --isolate in Phase 1; /herd-merge, /herd-discard, ⊕N-unmerged badge, per-role isolate warning in Phase 2. -->

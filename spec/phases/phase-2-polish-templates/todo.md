@@ -24,7 +24,14 @@ Polish & templates. Track progress here.
 - [ ] `/herd-hide <name>` (persist hidden set in state.json, per-workspace)
 - [ ] `/herd-unhide <name>`
 
+## Worktree lifecycle (create landed in Phase 1)
+- [ ] `/herd-merge <name>` wraps `wt merge` (name→herd/<name> resolution, `-y` for hooks)
+- [ ] `/herd-discard <name>` wraps `wt remove`
+- [ ] `⊕ N unmerged herd worktrees` badge from `wt list --format json` (filter herd/* with changes/unpushed)
+- [ ] Per-role `isolate: true` warning: notify on spawn + persistent `⚠` row marker
+- [ ] Config default `worktrees.autoDiscardOnClose = false`
+
 ## `compact-for-*` refinements
-- [ ] Iterate the 5 templates from real usage
+- [ ] Iterate the 6 templates from real usage
 - [ ] Per-template description + autocomplete hints
 - [ ] Shared skeleton partial if prompt templates support includes

@@ -57,9 +57,19 @@ templates/roles that close the herd loop end-to-end. This is the first
     populated from pi's available models in-process)
   - `goal / extra context` (free text, optional — appended to role system prompt)
 - Name collision: **error by default**; configurable to auto-suffix (D17).
-- Starting pi in the new pane: type the `pi` launch command (with `--model`/
-  `--thinking`/`--name` as chosen) via `sendCommand`; respect
-  `PI_SUBAGENT_SHELL_READY_DELAY_MS`-style ready delay (port from reference).
+- Starting pi in the new pane (shared-tree path): type the `pi` launch
+  command (with `--model`/`--thinking`/`--name` as chosen) via `sendCommand`;
+  respect `PI_SUBAGENT_SHELL_READY_DELAY_MS`-style ready delay (port from
+  reference).
+- **`--isolate` flag (minimal Worktrunk integration, D21/D22):** instead of the
+  shared-tree spawn, run `wt switch -c -x "pi …" herd/<name>` in the new pane
+  — `wt` creates the worktree (branch `herd/<name>`, path per the user's
+  `worktree-path` template) and launches pi inside it in one subprocess. The
+  spawned agent writes its worktree `branch` + `worktreePath` into its own
+  state row so the roster shows the branch. Requires `wt` installed +
+  shell-integrated; only used when `--isolate` is passed. **No** `/herd-merge`/
+  `/herd-discard` in Phase 1 — reconcile with bare `wt merge`/`wt remove` by
+  hand until Phase 2.
 
 ### `/herd-push` — ferry my last message to a target
 - `pi.registerCommand("herd-push", ...)`; arg: `<name>`; flag: `--force` (D16).
@@ -90,9 +100,13 @@ templates/roles that close the herd loop end-to-end. This is the first
 
 ### Bundled resources
 - `prompts/compact-for-exploration.md`, `compact-for-debug.md`,
-  `compact-for-prototype.md`, `compact-for-review.md`, `compact-for-handoff.md`
-  — each with `argument-hint: "<focus>"`, referencing artifacts by path,
-  redacting secrets, tailoring to `$1`.
+  `compact-for-prototype.md`, `compact-for-review.md`, `compact-for-handoff.md`,
+  and `compact-for-variants.md` (6th — produces a parallel-prototype spawn
+  plan: a menu of N approaches, each with a one-line goal + suggested
+  `herd/<name>` branch; the human executes it manually via
+  `/herd-new --isolate`).
+  Each template: `argument-hint: "<focus>"`, references artifacts by path,
+  redacts secrets, tailors to `$1`.
 - `agents/explorer.md`, `debugger.md`, `prototyper.md`, `reviewer.md` — role
   definitions with default model + thinking frontmatter.
 - All scaffolded editable by `/herd-init`; originals ship in the package.

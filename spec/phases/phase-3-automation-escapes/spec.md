@@ -29,19 +29,11 @@
 - `/herd --all` shows panes/tabs across all herdr workspaces (for multi-herd
   users). Default stays single-workspace.
 
-### Per-agent working-tree isolation
-- `/herd-new --isolate` spawns the agent into its own git worktree (kills
-  context-bleed structurally); roster shows the worktree branch.
-- Lifecycle: `/herd-merge <name>` / `/herd-discard <name>` to reconcile or
-  drop (maps to postmortem fix #5 — treat worktrees as scoped resources).
-
 ## Risks / open impl details
 - Cooperative pull tool must not become a runaway-fan-out vector — cap calls
   per turn (config), surface in the widget when an agent pulls.
 - Lead-agent mode blurs the "human only" thesis from D1; document the tradeoff
   prominently in philosophy.md if adopted.
-- Worktree isolation touches the user's git state — needs careful cleanup and
-  clear ownership (canonical = main tree, per the postmortem).
 
 ## Out of scope (explicitly not planned)
 - A central orchestrator process / auto-spawn loops / auto result-injection.
