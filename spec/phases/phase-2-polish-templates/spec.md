@@ -39,11 +39,11 @@
 ### Worktree lifecycle (create landed in Phase 1; D22/D23/D25)
 - `/herd-merge <name>` — wraps `wt merge` (squash + rebase + fast-forward +
   remove worktree, with pre-merge hooks as local CI). Resolve `<name>` →
-  `herd/<name>` branch + worktree path from state row; drive `wt merge` with
+  `herd-my-pi/<name>` branch + worktree path from state row; drive `wt merge` with
   `-y`/`--yes` to avoid interactive hook-approval blocking.
 - `/herd-discard <name>` — wraps `wt remove` (removes worktree + branch).
 - `⊕ N unmerged herd worktrees` badge on every widget, computed from
-  `wt list --format json` filtered to `herd/*` branches with changes or
+  `wt list --format json` filtered to `herd-my-pi/*` branches with changes or
   unpushed commits. Replaces herd-side dirty-checking — wt already detects it.
 - Per-role `isolate: true` frontmatter warning: when a role expects isolation
   but the user spawned without `--isolate`, the child shows a `ctx.ui.notify`

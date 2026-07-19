@@ -62,8 +62,8 @@ templates/roles that close the herd loop end-to-end. This is the first
   respect `PI_SUBAGENT_SHELL_READY_DELAY_MS`-style ready delay (port from
   reference).
 - **`--isolate` flag (minimal Worktrunk integration, D21/D22):** instead of the
-  shared-tree spawn, run `wt switch -c -x "pi …" herd/<name>` in the new pane
-  — `wt` creates the worktree (branch `herd/<name>`, path per the user's
+  shared-tree spawn, run `wt switch -c -x "pi …" herd-my-pi/<name>` in the new pane
+  — `wt` creates the worktree (branch `herd-my-pi/<name>`, path per the user's
   `worktree-path` template) and launches pi inside it in one subprocess. The
   spawned agent writes its worktree `branch` + `worktreePath` into its own
   state row so the roster shows the branch. Requires `wt` installed +
@@ -103,7 +103,7 @@ templates/roles that close the herd loop end-to-end. This is the first
   `compact-for-prototype.md`, `compact-for-review.md`, `compact-for-handoff.md`,
   and `compact-for-variants.md` (6th — produces a parallel-prototype spawn
   plan: a menu of N approaches, each with a one-line goal + suggested
-  `herd/<name>` branch; the human executes it manually via
+  `herd-my-pi/<name>` branch; the human executes it manually via
   `/herd-new --isolate`).
   Each template: `argument-hint: "<focus>"`, references artifacts by path,
   redacts secrets, tailors to `$1`.

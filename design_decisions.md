@@ -458,7 +458,7 @@ don't need it.
 **Decision:** herd does **not** implement worktree management. It wraps the
 [Worktrunk](https://worktrunk.dev/) `wt` CLI, which is purpose-built for parallel
 AI agents in git worktrees:
-- `/herd-new --isolate` → `wt switch -c -x "pi …" herd/<name>` (create worktree
+- `/herd-new --isolate` → `wt switch -c -x "pi …" herd-my-pi/<name>` (create worktree
   + launch pi inside it in one shot).
 - `/herd-merge <name>` → `wt merge` (squash + rebase + fast-forward + remove
   worktree, with pre-merge hooks as local CI).
@@ -466,7 +466,7 @@ AI agents in git worktrees:
 - Roster working-tree state + the unmerged-worktrees badge → `wt list --format
   json`.
 
-Herd owns a **branch namespace** (`herd/<agent-name>`) and the UX; `wt` owns
+Herd owns a **branch namespace** (`herd-my-pi/<agent-name>`) and the UX; `wt` owns
 the worktree mechanics. Herd respects the user's `wt` config
 (`worktree-path` template) and only overrides per-invocation via `--config-set`
 when herd has a specific reason (e.g. nesting under `.pi/herd-my-pi/worktrees/`).
@@ -487,7 +487,7 @@ verbs) while delegating mechanics to `wt` — herd depends on `wt` being install
 
 **Decision:** When an isolated ephemeral agent's pane closes, its worktree is
 **never auto-deleted**. Instead, every widget shows a `⊕ N unmerged herd
-worktrees` badge, computed from `wt list --format json` filtered to `herd/*`
+worktrees` badge, computed from `wt list --format json` filtered to `herd-my-pi/*`
 branches with changes or unpushed commits. Reconciliation is explicit:
 `/herd-merge <name>` (wraps `wt merge`) or `/herd-discard <name>` (wraps
 `wt remove`). Default in `.pi/herd-my-pi/config.json`: `worktrees.autoDiscardOnClose
@@ -511,7 +511,7 @@ clean tree) but not the default.
 
 **Decision:** Adopt **option 3** — a `compact-for-variants` prompt template
 (the 6th, shipping in Phase 1) that produces a structured **spawn plan** (a menu
-of N approaches, each with a one-line goal + suggested `herd/<name>` branch).
+of N approaches, each with a one-line goal + suggested `herd-my-pi/<name>` branch).
 The human executes that plan manually via `/herd-new --isolate` + `/herd-push` +
 `/herd-pull` per variant. **No first-class `/herd-variants` fan-out command** is
 built; it is rejected (not just deferred).
@@ -535,7 +535,7 @@ purest expression of "compaction is smart, transport is dumb, human orchestrates
 
 **Decision (updated, was "all in Phase 3"):** A **minimal cut** of worktree
 support lands in **Phase 1**: only `/herd-new --isolate` (wraps
-`wt switch -c -x "pi …" herd/<name>`) plus the spawned agent writing its
+`wt switch -c -x "pi …" herd-my-pi/<name>`) plus the spawned agent writing its
 worktree branch into its own state row (so the roster shows the branch). The
 `compact-for-variants` prompt template also ships in Phase 1 (the 6th
 template). The **lifecycle** — `/herd-merge`, `/herd-discard`, the

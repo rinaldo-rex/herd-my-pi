@@ -28,11 +28,11 @@ export default function (pi: ExtensionAPI): void {
     const config = loadConfig(ctx.cwd, CONFIG_DIR_NAME);
     const isMain = process.env.HERDR_HERD_MAIN_PANE === id.paneId;
 
-    // name: Phase 1's /herd-new sets HERDR_HERD_NAME on the child; otherwise
+    // name: Phase 1's /herd-new sets HERD_MY_PI_NAME on the child; otherwise
     // fall back to the paneId.
     const self: PaneRow = {
       paneId: id.paneId,
-      name: process.env.HERDR_HERD_NAME ?? id.paneId,
+      name: process.env.HERD_MY_PI_NAME ?? id.paneId,
       type: "pane",
       workspaceId: id.workspaceId,
       // model/thinking: best-effort from ctx.model (Phase 1 will read precisely).

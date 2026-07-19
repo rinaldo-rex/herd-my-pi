@@ -11,7 +11,7 @@ const DEFAULTS: Config = {
   staleness: { amberMs: 120_000, redMs: 600_000, pulseMs: 1_800_000 },
   intervals: { heartbeatMs: 2_000, widgetRefreshMs: 1_000, closedPaneLingerMs: 5_000 },
   spawn: { defaultDirection: "right", collisionPolicy: "error" },
-  worktrees: { autoDiscardOnClose: false, branchPrefix: "herd/" },
+  worktrees: { autoDiscardOnClose: false, branchPrefix: "herd-my-pi/" },
 };
 
 export function defaultConfig(): Config {

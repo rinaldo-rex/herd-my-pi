@@ -213,7 +213,7 @@ management *designed for parallel AI agents* — a near-perfect fit. Key finding
 - `worktree-path` is a configurable template (user config or per-project via
   `[projects."host/owner/repo"]`), overridable per-invocation via `--config-set`
   or `WORKTRUNK_WORKTREE_PATH`. Default is a sibling dir. → herd doesn't impose a
-  location; it owns a `herd/<name>` branch namespace and respects wt's config.
+  location; it owns a `herd-my-pi/<name>` branch namespace and respects wt's config.
 - `wt merge` does squash+rebase+ff+remove-worktree with pre-merge hooks (local
   CI); `wt remove` discards; `wt list --format json` reports every worktree with
   changes/ahead/behind/unpushed/age.
@@ -223,7 +223,7 @@ management *designed for parallel AI agents* — a near-perfect fit. Key finding
    frontmatter; if a role expects isolation but spawned without `--isolate`, the
    child warns (notify + widget `⚠`).
 2. **Worktree home** → use `wt`'s configured template (respect user config);
-   herd owns the `herd/<name>` branch namespace; override per-invocation only if
+   herd owns the `herd-my-pi/<name>` branch namespace; override per-invocation only if
    needed. (User's instinct to "use wt's default" — formalized.)
 3. **Phasing** → keep in **Phase 3** (user decision; overrides my lean to pull it
    up). `compact-for-variants` template still ships in Phase 1.

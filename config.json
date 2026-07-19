@@ -22,6 +22,6 @@
   },
   "worktrees": {
     "autoDiscardOnClose": false,
-    "branchPrefix": "herd/"
+    "branchPrefix": "herd-my-pi/"
   }
 }
