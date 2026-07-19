@@ -192,27 +192,28 @@ function padVisible(str: string, targetWidth: number): string {
   return str + " ".repeat(padding);
 }
 
+/** Get terminal width, falling back to 80. */
+function getTerminalWidth(): number {
+  return process.stdout.columns || 80;
+}
+
 /** Render the complete widget box with all rows. */
 export function renderWidgetBox(
   rows: Array<{ formatted: string; isClosed: boolean }>,
   opts: {
     title: string;
     themeFg: (color: any, text: string) => string;
-    width?: number;
   },
 ): string[] {
   const { title, themeFg } = opts;
   
-  // Calculate dynamic width based on longest row
-  const headerText = `─ ${title} `;
-  const headerLen = stripAnsi(headerText).length;
-  const maxRowLen = Math.max(
-    headerLen,
-    ...rows.map(r => stripAnsi(r.formatted).length)
-  );
-  const innerWidth = maxRowLen + 2; // Add some padding
+  // Use full terminal width
+  const width = getTerminalWidth();
+  const innerWidth = width - 4; // "│ " + content + " │"
   
   // Build the header
+  const headerText = `─ ${title} `;
+  const headerLen = stripAnsi(headerText).length;
   const headerPad = Math.max(0, innerWidth - headerLen);
   const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerPad)}${BOX.topRight}`;
   
@@ -239,8 +240,8 @@ export function renderWidgetBox(
 /** Render a minimal placeholder box when no agents exist. */
 export function renderEmptyBox(
   themeFg: (color: any, text: string) => string,
-  width: number = 50,
 ): string[] {
+  const width = getTerminalWidth();
   const innerWidth = width - 4;
   const text = "No agents in herd";
   const pad = Math.max(0, innerWidth - text.length);
