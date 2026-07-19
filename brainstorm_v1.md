@@ -2,8 +2,10 @@
 
 This is the living record of the brainstorm that produced
 [philosophy.md](./philosophy.md), [design_decisions.md](./design_decisions.md),
-and [spec/phases/](./spec/phases/). No code was written; this is the scope and
-rationale captured before planning.
+and [spec/phases/](./spec/phases/). It was written before any code; **Phase 0
+and Phase 1 are now implemented** (see `src/`, `extensions/`, and the
+per-phase `done.md`). This document captures only the scope and rationale —
+it is not updated as code lands.
 
 ## The starting idea
 
@@ -278,4 +280,6 @@ minimal-cut phasing) and the updated
 
 The detailed Phase-1 technical plan (module/file layout, herdr CLI surface map,
 widget render+refresh model, per-command contracts, config + state.json schema,
-explicit Phase 2/3 boundaries) — to be produced from this record. No code yet.
+explicit Phase 2/3 boundaries) — produced from this record. Phase 0 and Phase 1
+are now implemented; see [spec/phases/](./spec/phases/) for the per-phase `done.md`
+tracking. Phases 2–3 remain spec-only.

@@ -4,7 +4,18 @@
 > multiple persistent interactive pi panes with a live roster and editable,
 > symmetric message ferrying. Remove any piece and the loop breaks.
 
-**Status:** not started · **Depends on:** Phase 0 · **Unblocks:** Phase 2
+**Status:** implementation complete · **Depends on:** Phase 0 · **Unblocks:** Phase 2
+
+All four commands, the display-only widget, `/herd-init`, the six prompt
+templates, and the four role agents are implemented and unit-tested (18 widget
+tests on top of Phase 0's 20). End-to-end smoke validation passed: the closed
+loop (`/herd-init` → `/herd-new` → widget → `/herd-push` → target receives →
+`/herd-pull` → orchestrator receives), the `--isolate` worktree path, base64
+round-trip through `pane run`, streaming-target `/herd-receive`, focus-marker
+move, and closed-pane transients. See `todo.md` and `done.md`.
+
+Phase 2 polish (selectable rows, badges, `/herd-save`/`/herd-resume`/`/herd-hide`,
+worktree lifecycle `/herd-merge`/`/herd-discard`) remains spec-only.
 
 ## Goal
 

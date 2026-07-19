@@ -63,9 +63,9 @@ The closed herd loop. Track progress here.
 - [x] `agents/reviewer.md`
 
 ## Validation / integration
-- [ ] End-to-end: `/herd-init` → `/herd-new scout` → widget shows scout → `/herd-push scout` → scout receives → `/herd-pull scout` → orchestrator receives
-- [ ] End-to-end isolated: `/herd-new --isolate proto` → wt worktree created on `herd-my-pi/proto` → roster shows branch → pane runs pi in the worktree
-- [ ] Verify base64 survives `pane run` (multiline/special chars)
-- [ ] Verify `/herd-receive` executes in target even if target is streaming
-- [ ] Verify ★-main marker + current-pane ▶ highlight move on focus change
-- [ ] Verify closed-pane transient + drop
+- [x] End-to-end: `/herd-init` → `/herd-new scout` → widget shows scout → `/herd-push scout` → scout receives → `/herd-pull scout` → orchestrator receives
+- [x] End-to-end isolated: `/herd-new --isolate proto` → wt worktree created on `herd-my-pi/proto` → roster shows branch → pane runs pi in the worktree
+- [x] Verify base64 survives `pane run` (multiline/special chars)
+- [x] Verify `/herd-receive` executes in target even if target is streaming
+- [x] Verify ★-main marker + current-pane ▶ highlight move on focus change
+- [x] Verify closed-pane transient + drop
