@@ -7,7 +7,7 @@ import { getCurrentPaneInfo } from "../src/herdr";
 import { loadConfig } from "../src/config";
 import { readRoster } from "../src/state";
 import { readCurrentPaneId } from "../src/herdr";
-import { formatRow, formatClosedRow, sortRows } from "./widget";
+import { formatRow, formatClosedRow, sortRows, renderWidgetBox, renderEmptyBox } from "./widget";
 import type { Config, RosterRow } from "../src/types";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 
@@ -142,36 +142,39 @@ function renderWidget(
   // Sort live rows: current pinned, then lastActivityMs desc
   const sortedLive = sortRows(liveRows, currentPaneId);
 
-  // Format rows
-  const lines: string[] = [];
+  // Format rows and build the box
+  const themeFg = ctx.ui.theme.fg.bind(ctx.ui.theme);
+  const rows: Array<{ formatted: string; isClosed: boolean }> = [];
 
   for (const row of sortedLive) {
     const isCurrent = row.paneId === currentPaneId;
-    lines.push(
-      formatRow(row, {
+    rows.push({
+      formatted: formatRow(row, {
         isCurrent,
         config,
-        themeFg: ctx.ui.theme.fg.bind(ctx.ui.theme),
+        themeFg,
         now,
         pulsePhase: state.pulsePhase,
       }),
-    );
+      isClosed: false,
+    });
   }
 
   // Add closed pane transients at the bottom
   for (const row of closedRows) {
-    lines.push(
-      formatClosedRow(row, {
+    rows.push({
+      formatted: formatClosedRow(row, {
         config,
-        themeFg: ctx.ui.theme.fg.bind(ctx.ui.theme),
+        themeFg,
       }),
-    );
+      isClosed: true,
+    });
   }
 
-  // If empty, show a placeholder
-  if (lines.length === 0) {
-    lines.push(ctx.ui.theme.fg("dim", "  No agents in herd"));
-  }
+  // Render the box
+  const lines = rows.length === 0
+    ? renderEmptyBox(themeFg)
+    : renderWidgetBox(rows, { title: "Herd", themeFg });
 
   ctx.ui.setWidget(WIDGET_ID, lines);
 }

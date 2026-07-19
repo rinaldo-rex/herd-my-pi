@@ -6,6 +6,8 @@ import {
   formatRow,
   formatClosedRow,
   sortRows,
+  renderWidgetBox,
+  renderEmptyBox,
 } from "../extensions/widget";
 import { defaultConfig } from "../src/config";
 import type { RosterRow } from "../src/types";
@@ -109,7 +111,7 @@ describe("formatRow", () => {
     live: true,
   };
 
-  it("includes name and model", () => {
+  it("includes name and status dot", () => {
     const line = formatRow(baseRow, {
       isCurrent: false,
       config,
@@ -118,7 +120,7 @@ describe("formatRow", () => {
       pulsePhase: false,
     });
     expect(line).toContain("scout");
-    expect(line).toContain("claude-sonnet-4");
+    expect(line).toContain("●"); // live dot for green tier
   });
 
   it("shows current marker when isCurrent", () => {
@@ -144,21 +146,34 @@ describe("formatRow", () => {
     expect(line).toContain(config.glyphs.main);
   });
 
-  it("shows branch when set", () => {
-    const isolatedRow = { ...baseRow, branch: "herd-my-pi/proto" };
-    const line = formatRow(isolatedRow, {
+  it("shows working tree state", () => {
+    const dirtyRow = { ...baseRow, workingTree: "dirty" as const };
+    const line = formatRow(dirtyRow, {
       isCurrent: false,
       config,
       themeFg,
       now: Date.now(),
       pulsePhase: false,
     });
-    expect(line).toContain("(herd-my-pi/proto)");
+    expect(line).toContain("dirty");
+  });
+
+  it("shows exited state for dead panes", () => {
+    const deadRow = { ...baseRow, live: false };
+    const line = formatRow(deadRow, {
+      isCurrent: false,
+      config,
+      themeFg,
+      now: Date.now(),
+      pulsePhase: false,
+    });
+    expect(line).toContain("exited");
+    expect(line).toContain("○"); // dead dot
   });
 });
 
 describe("formatClosedRow", () => {
-  it("shows exited label", () => {
+  it("shows exited label with dead dot", () => {
     const row: RosterRow = {
       paneId: "w1:p1",
       name: "scout",
@@ -168,5 +183,51 @@ describe("formatClosedRow", () => {
     const line = formatClosedRow(row, { config, themeFg });
     expect(line).toContain("scout");
     expect(line).toContain("exited");
+    expect(line).toContain("○");
+  });
+});
+
+describe("renderWidgetBox", () => {
+  it("renders a box with rounded corners", () => {
+    const rows = [
+      { formatted: "▶ ★ ● scout  clean  5s", isClosed: false },
+      { formatted: "  ★ ● proto  dirty  3m", isClosed: false },
+    ];
+    const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
+    
+    // Should have header + 2 rows + footer = 4 lines
+    expect(lines).toHaveLength(4);
+    
+    // Check corners
+    expect(lines[0]).toContain("╭");
+    expect(lines[0]).toContain("╮");
+    expect(lines[3]).toContain("╰");
+    expect(lines[3]).toContain("╯");
+    
+    // Check vertical borders
+    expect(lines[1]).toContain("│");
+    expect(lines[2]).toContain("│");
+  });
+
+  it("includes title in header", () => {
+    const rows = [{ formatted: "test", isClosed: false }];
+    const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
+    expect(lines[0]).toContain("Herd");
+  });
+});
+
+describe("renderEmptyBox", () => {
+  it("renders placeholder when no agents", () => {
+    const lines = renderEmptyBox(themeFg);
+    
+    // Should have header + 1 content + footer = 3 lines
+    expect(lines).toHaveLength(3);
+    
+    // Check for placeholder text
+    expect(lines[1]).toContain("No agents in herd");
+    
+    // Check corners
+    expect(lines[0]).toContain("╭");
+    expect(lines[2]).toContain("╰");
   });
 });
