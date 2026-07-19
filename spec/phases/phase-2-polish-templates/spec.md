@@ -3,7 +3,9 @@
 > Make the herd pleasant: interactive widget, badge polish, templates/resume,
 > noise control. None of this is needed to prove the concept.
 
-**Status:** not started · **Depends on:** Phase 1 · **Unblocks:** Phase 3
+**Status:** in progress · **Depends on:** Phase 1 · **Unblocks:** Phase 3
+
+Interactive widget (`/herd-focus`) shipped (squash `3e69afa`).
 
 ## Scope
 
@@ -65,8 +67,11 @@
 - Cross-workspace `--all` roster view.
 
 ## Risks / open impl details
-- Focusing another pane via herdr: confirm the exact `herdr` focus/switch
-  subcommand (`pane focus`? `tab select`?) — differs for pane vs tab.
+- ~~Focusing another pane via herdr: confirm the exact `herdr` focus/switch
+  subcommand (`pane focus`? `tab select`?) — differs for pane vs tab.~~ →
+  **Resolved:** herdr 0.7.4 has no named-pane focus, only `tab focus <tabId>`
+  and directional `pane focus --direction`. `/herd-focus` uses `tab focus`.
+  If herdr adds `pane focus <paneId>` later, it's a one-line change.
 - Template format vs role-agent format: a herd template is *not* a pi agent
   definition — it's the spawn-time choices (role + model + thinking + goal +
   type). Keep it as a small JSON in `.pi/herd-my-pi/templates/`.

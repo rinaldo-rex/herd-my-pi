@@ -10,9 +10,10 @@ co-drive. Not a sub-agent framework.
 ## Status
 
 Phase 0 (foundation) and Phase 1 (the closed herd loop) are **implemented**
-and tested (38 vitest tests, `tsc` clean, live e2e smoke-tested). Phases 2–3
-are spec-only. This README indexes the design documentation produced during
-the v1 brainstorm.
+and tested (44 vitest tests, `tsc` clean, live e2e smoke-tested). Phase 2 is
+**in progress** — the interactive `/herd-focus` overlay is shipped. Phases 2
+(remaining) and 3 are spec-only. This README indexes the design documentation
+produced during the v1 brainstorm.
 
 ## Documentation
 

@@ -281,5 +281,6 @@ minimal-cut phasing) and the updated
 The detailed Phase-1 technical plan (module/file layout, herdr CLI surface map,
 widget render+refresh model, per-command contracts, config + state.json schema,
 explicit Phase 2/3 boundaries) — produced from this record. Phase 0 and Phase 1
-are now implemented; see [spec/phases/](./spec/phases/) for the per-phase `done.md`
-tracking. Phases 2–3 remain spec-only.
+are now implemented; Phase 2 is **in progress** (`/herd-focus` interactive overlay
+shipped); Phase 3 remains spec-only. See [spec/phases/](./spec/phases/) for the
+per-phase `done.md` tracking.
