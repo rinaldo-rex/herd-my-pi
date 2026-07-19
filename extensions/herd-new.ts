@@ -19,9 +19,12 @@ export function registerHerdNew(pi: ExtensionAPI, projectRoot: string, configDir
   pi.registerCommand("herd-new", {
     description: "Spawn a new herd agent",
     handler: async (args, ctx) => {
-      const nameArg = args.trim();
-      if (nameArg && !nameArg.startsWith("--")) {
-        await spawnNamed(pi, ctx, nameArg, projectRoot, configDirName, args);
+      const parts = args.trim().split(/\s+/);
+      const name = parts[0] ?? "";
+      const isIsolate = parts.includes("--isolate");
+      
+      if (name && !name.startsWith("--")) {
+        await spawnNamed(pi, ctx, name, projectRoot, configDirName, isIsolate, args);
       } else {
         await spawnWithWidget(pi, ctx, projectRoot, configDirName);
       }
@@ -36,6 +39,7 @@ async function spawnNamed(
   name: string,
   projectRoot: string,
   configDirName: string,
+  isIsolate: boolean = false,
   args: string = "",
 ): Promise<void> {
   const id = getCurrentPaneInfo();
@@ -61,11 +65,8 @@ async function spawnNamed(
     }
   }
 
-  // Check if --isolate flag is present
-  const isIsolate = args.includes("--isolate");
-
   if (isIsolate) {
-    await spawnIsolated(pi, ctx, name, projectRoot, configDirName, id, args);
+    await spawnIsolated(pi, ctx, name, projectRoot, configDirName, id);
     return;
   }
 
@@ -127,7 +128,6 @@ async function spawnIsolated(
   projectRoot: string,
   configDirName: string,
   id: { paneId: string; workspaceId: string },
-  args: string = "",
 ): Promise<void> {
   // Check wt is available
   try {
