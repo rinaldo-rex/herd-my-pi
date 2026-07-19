@@ -193,7 +193,7 @@ function padVisible(str: string, targetWidth: number): string {
 }
 
 /** Get visible length of a string (without ANSI codes). */
-function visibleLength(str: string): number {
+export function visibleLength(str: string): number {
   return stripAnsi(str).length;
 }
 
@@ -202,7 +202,16 @@ function getTerminalWidth(): number {
   return process.stdout.columns || 80;
 }
 
-/** Render the complete widget box with all rows. */
+/** Render the complete widget box with all rows.
+ *
+ *  Width math (all lines must be the same total width W = terminal width):
+ *    borderWidth   = W - 2   (space between the two corner chars  ╭...╮ )
+ *    contentWidth   = W - 4   (space between the │ borders, minus the 2 padding spaces)
+ *
+ *    header:  ╭ + title + dashes(borderWidth - titleLen) + ╮
+ *    footer:  ╰ + dashes(borderWidth) + ╯
+ *    content: │ + ' ' + padded(contentWidth) + ' ' + │
+ */
 export function renderWidgetBox(
   rows: Array<{ formatted: string; isClosed: boolean }>,
   opts: {
@@ -211,60 +220,47 @@ export function renderWidgetBox(
   },
 ): string[] {
   const { title, themeFg } = opts;
-  
-  // Use full terminal width
-  const width = getTerminalWidth();
-  const innerWidth = width - 4; // "│ " + content + " │"
-  
-  // Build the header
+
+  const W = getTerminalWidth();
+  const borderWidth = W - 2; // between the two corner chars
+  const contentWidth = W - 4; // between the two │ chars (incl. 1 pad space each side)
+
+  // Header: ╭─ Title ────╮
   const headerText = `─ ${title} `;
-  const headerLen = stripAnsi(headerText).length;
-  const headerPad = Math.max(0, innerWidth - headerLen);
-  const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerPad)}${BOX.topRight}`;
-  
-  // Build content rows
-  const contentLines: string[] = [];
-  for (const { formatted } of rows) {
-    const padded = padVisible(formatted, innerWidth);
-    // Build line: │ content │  with borders colored
-    const line = `${BOX.vertical} ${padded} ${BOX.vertical}`;
-    contentLines.push(line);
-  }
-  
-  // Build the footer
-  const footer = `${BOX.bottomLeft}${BOX.horizontal.repeat(innerWidth)}${BOX.bottomRight}`;
-  
-  // Combine all lines
-  const lines = [
-    header,
-    ...contentLines,
-    footer,
-  ];
-  
-  return lines;
+  const headerLen = visibleLength(headerText);
+  const headerDash = Math.max(0, borderWidth - headerLen);
+  const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerDash)}${BOX.topRight}`;
+
+  // Content rows: │ padded content │
+  const contentLines = rows.map(({ formatted }) => {
+    const padded = padVisible(formatted, contentWidth);
+    return `${BOX.vertical} ${padded} ${BOX.vertical}`;
+  });
+
+  // Footer: ╰────╯
+  const footer = `${BOX.bottomLeft}${BOX.horizontal.repeat(borderWidth)}${BOX.bottomRight}`;
+
+  return [header, ...contentLines, footer];
 }
 
 /** Render a minimal placeholder box when no agents exist. */
 export function renderEmptyBox(
   themeFg: (color: any, text: string) => string,
 ): string[] {
-  const width = getTerminalWidth();
-  const innerWidth = width - 4;
+  const W = getTerminalWidth();
+  const borderWidth = W - 2;
+  const contentWidth = W - 4;
   const text = "No agents in herd";
-  const pad = Math.max(0, innerWidth - text.length);
+  const pad = Math.max(0, contentWidth - visibleLength(text));
   const padLeft = Math.floor(pad / 2);
   const padRight = pad - padLeft;
-  
+
   const headerText = `─ Herd `;
-  const headerPad = Math.max(0, innerWidth - stripAnsi(headerText).length);
-  const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerPad)}${BOX.topRight}`;
-  
-  const content = `${BOX.vertical}${" ".repeat(padLeft + 1)}${themeFg("dim", text)}${" ".repeat(padRight + 1)}${BOX.vertical}`;
-  const footer = `${BOX.bottomLeft}${BOX.horizontal.repeat(innerWidth)}${BOX.bottomRight}`;
-  
-  return [
-    header,
-    content,
-    footer,
-  ];
+  const headerDash = Math.max(0, borderWidth - visibleLength(headerText));
+  const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerDash)}${BOX.topRight}`;
+
+  const content = `${BOX.vertical}${" ".repeat(padLeft + 1)}${text}${" ".repeat(padRight + 1)}${BOX.vertical}`;
+  const footer = `${BOX.bottomLeft}${BOX.horizontal.repeat(borderWidth)}${BOX.bottomRight}`;
+
+  return [header, content, footer];
 }

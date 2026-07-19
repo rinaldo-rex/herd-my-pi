@@ -8,6 +8,7 @@ import {
   sortRows,
   renderWidgetBox,
   renderEmptyBox,
+  visibleLength,
 } from "../extensions/widget";
 import { defaultConfig } from "../src/config";
 import type { RosterRow } from "../src/types";
@@ -213,6 +214,27 @@ describe("renderWidgetBox", () => {
     const rows = [{ formatted: "test", isClosed: false }];
     const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
     expect(lines[0]).toContain("Herd");
+  });
+
+  it("all lines have the same visible width", () => {
+    // Mock terminal width for deterministic test
+    const realCols = process.stdout.columns;
+    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true });
+    try {
+      const rows = [
+        { formatted: themeFg("success", "●") + " scout  clean  5s", isClosed: false },
+        { formatted: themeFg("warning", "◐") + " proto  dirty  3m", isClosed: false },
+        { formatted: themeFg("dim", "○") + " old    exited 2h", isClosed: false },
+      ];
+      const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
+      
+      const widths = lines.map(l => visibleLength(l));
+      // 3 rows + header + footer = 5 lines, all exactly 80 visible chars wide
+      expect(widths).toEqual([80, 80, 80, 80, 80]);
+      expect(new Set(widths).size).toBe(1);
+    } finally {
+      Object.defineProperty(process.stdout, "columns", { value: realCols, configurable: true });
+    }
   });
 });
 
