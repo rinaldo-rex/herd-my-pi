@@ -181,7 +181,8 @@ function shortModel(model: string): string {
 
 /** Strip ANSI escape codes for length calculation. */
 function stripAnsi(str: string): string {
-  return str.replace(/\x1b\[[0-9;]*m/g, "");
+  // Match various ANSI escape code formats
+  return str.replace(/\x1b\[[0-9;]*m|\[\d+m/g, "");
 }
 
 /** Pad a string to a target visible width (accounting for ANSI codes). */
@@ -200,14 +201,19 @@ export function renderWidgetBox(
     width?: number;
   },
 ): string[] {
-  const { title, themeFg, width = 50 } = opts;
+  const { title, themeFg } = opts;
   
-  // Calculate inner width (between the vertical borders)
-  const innerWidth = width - 4; // "│ " + content + " │"
+  // Calculate dynamic width based on longest row
+  const headerText = `─ ${title} `;
+  const headerLen = stripAnsi(headerText).length;
+  const maxRowLen = Math.max(
+    headerLen,
+    ...rows.map(r => stripAnsi(r.formatted).length)
+  );
+  const innerWidth = maxRowLen + 2; // Add some padding
   
   // Build the header
-  const headerText = `─ ${title} `;
-  const headerPad = Math.max(0, innerWidth - stripAnsi(headerText).length);
+  const headerPad = Math.max(0, innerWidth - headerLen);
   const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerPad)}${BOX.topRight}`;
   
   // Build content rows
