@@ -16,7 +16,7 @@ Polish & templates. Track progress here.
 
 ## Templates & resume
 - [ ] `/herd-new --template <name>` spawn from saved template
-- [ ] `/herd-save <name>` write `.pi/herd/templates/<name>.json`
+- [ ] `/herd-save <name>` write `.pi/herd-my-pi/templates/<name>.json`
 - [ ] `/herd-resume <name>` re-instantiate agent shape
 - [ ] Template format (role+model+thinking+goal+type), not a pi agent definition
 

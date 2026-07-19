@@ -1,4 +1,4 @@
-// Shared roster state IO (`.pi/herd/state.json`).
+// Shared roster state IO (`.pi/herd-my-pi/state.json`).
 //
 // Per D26, state.json stores herd-unique fields only. The roster is a JOIN of
 // `herdr pane list` (live presence/agent_status/cwd/session) with state.json
@@ -6,11 +6,11 @@
 
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import type { HerdrPane, PaneRow, RosterRow } from "./types";
+import { type HerdrPane, type PaneRow, type RosterRow, HERD_DIR_NAME } from "./types";
 import { listPanes } from "./herdr";
 
 export function stateFilePath(projectRoot: string, configDirName = ".pi"): string {
-  return join(projectRoot, configDirName, "herd", "state.json");
+  return join(projectRoot, configDirName, HERD_DIR_NAME, "state.json");
 }
 
 interface StateFile {

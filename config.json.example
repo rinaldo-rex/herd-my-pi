@@ -1,5 +1,5 @@
 {
-  "_comment": "Copy to .pi/herd/config.json and edit. Omitted fields inherit package defaults (config.json). This example customizes glyphs, slows the heartbeat, and switches collision to auto-suffix.",
+  "_comment": "Copy to .pi/herd-my-pi/config.json and edit. Omitted fields inherit package defaults (config.json). This example customizes glyphs, slows the heartbeat, and switches collision to auto-suffix.",
   "glyphs": {
     "agentFilled": "●",
     "agentOutline": "○"

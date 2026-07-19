@@ -17,9 +17,9 @@ The closed herd loop. Track progress here.
 
 ## `/herd-init` — scaffold
 - [ ] `pi.registerCommand("herd-init", ...)`; `--force` flag
-- [ ] Idempotent merge into `.pi/prompts/`, `.pi/agents/`, `.pi/herd/config.json`
+- [ ] Idempotent merge into `.pi/prompts/`, `.pi/agents/`, `.pi/herd-my-pi/config.json`
 - [ ] Never overwrite existing user files unless `--force`
-- [ ] Create `.pi/herd/` dir + config.json from package defaults
+- [ ] Create `.pi/herd-my-pi/` dir + config.json from package defaults
 - [ ] Materialize 5 templates + 4 role agents (only if missing)
 
 ## `/herd-new` — spawn agent

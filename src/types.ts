@@ -1,7 +1,12 @@
 // Shared types for herd-my-pi (Phase 0 — foundation).
 //
-// Naming note: the package is `herd-my-pi`. The `/herd-*` commands and the
-// `.pi/herd/` directory use `herd` as a verb for meaningfulness only.
+// Naming convention: the package is `herd-my-pi`. The bare word `herd` is
+// reserved for commands (`/herd-*`, a verb). All other identifiers use the
+// full package name — e.g. the install/state directory is `.pi/herd-my-pi/`.
+// HERD_DIR_NAME below is the single source of truth for that subdirectory.
+
+/** Subdirectory under `<project>/.pi/` (CONFIG_DIR_NAME) for herd-my-pi files. */
+export const HERD_DIR_NAME = "herd-my-pi";
 
 export interface Identity {
   paneId: string;
@@ -46,7 +51,7 @@ export interface PaneInspection {
 }
 
 /**
- * A row in `.pi/herd/state.json` — herd-unique fields ONLY (D26). herdr already
+ * A row in `.pi/herd-my-pi/state.json` — herd-unique fields ONLY (D26). herdr already
  * tracks presence/agent_status/cwd/session live, so we store just what herdr
  * can't know: name, model, thinking, git working-tree/branch, timing, isMain.
  */

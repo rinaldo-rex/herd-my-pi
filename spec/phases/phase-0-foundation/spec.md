@@ -50,7 +50,7 @@ this phase is user-visible.
   interrupt).
 - `closePane(paneId)` — `herdr pane close`.
 
-### 5. Shared state IO (`.pi/herd/state.json`)
+### 5. Shared state IO (`.pi/herd-my-pi/state.json`)
 - `loadState()` / `saveState(state)` — read/write the shared roster state file
   with a atomic-write (temp + rename) to avoid torn reads across peer
   instances.
@@ -94,7 +94,7 @@ this phase is user-visible.
 ```
 src/herdr.ts          # availability, identity, surfaces, inspection, transport
 src/state.ts          # state.json load/save, writeSelfRow, readRoster (herdr join)
-src/config.ts         # load .pi/herd/config.json over package defaults
+src/config.ts         # load .pi/herd-my-pi/config.json over package defaults
 src/heartbeat.ts      # startHeartbeat(): interval → refresh + writeSelfRow
 src/types.ts          # shared types (PaneRow, RosterRow, HerdrPane, Config)
 extensions/index.ts   # thin entry: session_start→writeSelfRow+heartbeat; session_shutdown→stop. No commands/widget.

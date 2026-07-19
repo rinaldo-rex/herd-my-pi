@@ -21,7 +21,7 @@ templates/roles that close the herd loop end-to-end. This is the first
 - Visibility is per-instance, in-memory; on startup, if `HERDR_HERD_WIDGET=1`
   is set (passed by `/herd-new` to spawned children), show the widget.
 - **Render model:** on a refresh timer (default ~1s, configurable), read
-  `.pi/herd/state.json` via Phase-0 `readRoster(myWorkspaceId)`, then:
+  `.pi/herd-my-pi/state.json` via Phase-0 `readRoster(myWorkspaceId)`, then:
   - Determine current pane via `readCurrentPaneId()`; pin that row to top with
     `▶`.
   - Mark the `★`-main row (paneId === `HERDR_HERD_MAIN_PANE`).
@@ -38,7 +38,7 @@ templates/roles that close the herd loop end-to-end. This is the first
 - Materializes into:
   - `.pi/prompts/*.md` — the five `compact-for-*` templates (editable).
   - `.pi/agents/*.md` — the four role agent definitions (editable).
-  - `.pi/herd/config.json` — herd config (glyphs, thresholds, intervals,
+  - `.pi/herd-my-pi/config.json` — herd config (glyphs, thresholds, intervals,
     collision policy, default pane direction) merged over package defaults.
 - Does NOT touch `.pi/settings.json` (pi auto-discovers `.pi/prompts/` and
   `.pi/agents/`).

@@ -173,7 +173,7 @@ in a later phase if needed.
 **Decision:**
 - Elapsed text colored by threshold: green <2m, amber 2–10m, red >10m,
   **pulse** for the worst tier (>30m). Thresholds configurable in
-  `.pi/herd/config.json`.
+  `.pi/herd-my-pi/config.json`.
 - Current (focused) agent pinned to top with a `▶` marker.
 - Remaining rows sorted by last-activity descending so genuinely stale ones
   sink to the bottom (visible but not distracting).
@@ -209,7 +209,7 @@ roster, can herd any peer. The `★` is a label, not authority.
 ## D10. Surface glyph — ◆/◇ default, configurable, T/P preset
 
 **Decision:** Default glyphs: `◆` (tab) / `◇` (pane). Configurable via
-`.pi/herd/config.json`, with a built-in `T`/`P` "bulletproof" preset.
+`.pi/herd-my-pi/config.json`, with a built-in `T`/`P` "bulletproof" preset.
 
 **Options considered:** box-drawing siblings (▤/▥); brackets (⦗/⦘);
 plain letters (T/P); filled/hollow diamonds (◆/◇).
@@ -241,17 +241,17 @@ real need only when running multiple herds — Phase 3.
 
 ---
 
-## D12. Config home — `.pi/herd/config.json`, scaffolded by `/herd-init`
+## D12. Config home — `.pi/herd-my-pi/config.json`, scaffolded by `/herd-init`
 
-**Decision:** Herd-specific config lives in a dedicated `.pi/herd/config.json`,
+**Decision:** Herd-specific config lives in a dedicated `.pi/herd-my-pi/config.json`,
 scaffolded by `/herd-init` (idempotent + merge, `--force` to reset). Defaults
 also ship in the package's `config.json` as a fallback layer.
 
-**Options considered:** dedicated `.pi/herd/config.json`; merge into
+**Options considered:** dedicated `.pi/herd-my-pi/config.json`; merge into
 `.pi/settings.json` under a `herd` key; package `config.json` + project override.
 
 **Rationale:** `.pi/agent/` is a **global** path; the project equivalent is
-`.pi/`. A dedicated `.pi/herd/` subdir keeps herd config out of pi's own
+`.pi/`. A dedicated `.pi/herd-my-pi/` subdir keeps herd config out of pi's own
 settings schema and its merge semantics, while mirroring how the reference
 project kept a `config.json` + `config.json.example`. Layered defaults (package
 fallback + project override) give sensible out-of-box behavior with per-project
@@ -304,7 +304,7 @@ no "does my free text override the template?" ambiguity.
 per pi pane; the package is globally installed). They communicate by sending
 **base64-encoded extension commands** (`/herd-receive <base64>`) via
 `herdr pane run <targetPaneId>`. The display-only widget reads a shared
-`.pi/herd/state.json` that each instance writes with its own row
+`.pi/herd-my-pi/state.json` that each instance writes with its own row
 (model/thinking/last-activity/cwd/working-tree/paneId/name/is-main), refreshed
 on a timer. The `★`-main is tracked via `HERDR_HERD_MAIN_PANE` env passed to
 spawned children.
@@ -364,7 +364,7 @@ immediately — which is the whole point of the herd.
 ## D17. Name collisions — default error, configurable auto-suffix
 
 **Decision:** `/herd-new <existing-name>` errors by default; configurable to
-auto-suffix (`scout` → `scout-2`) in `.pi/herd/config.json`.
+auto-suffix (`scout` → `scout-2`) in `.pi/herd-my-pi/config.json`.
 
 **Rationale:** Error-by-default prevents accidental roster ambiguity (two
 "scout" rows); auto-suffix is an opt-in for users who spawn many similar agents.
@@ -385,7 +385,7 @@ baggage.
 ## D19. `/herd-init` safety — idempotent + merge, `--force` to reset
 
 **Decision:** `/herd-init` is idempotent and merge-only — it never overwrites
-user edits to `.pi/prompts/`, `.pi/agents/`, or `.pi/herd/config.json`. A
+user edits to `.pi/prompts/`, `.pi/agents/`, or `.pi/herd-my-pi/config.json`. A
 `--force` flag resets them to package defaults.
 
 **Rationale:** Users will customize the scaffolded templates and role agents;
@@ -469,7 +469,7 @@ AI agents in git worktrees:
 Herd owns a **branch namespace** (`herd/<agent-name>`) and the UX; `wt` owns
 the worktree mechanics. Herd respects the user's `wt` config
 (`worktree-path` template) and only overrides per-invocation via `--config-set`
-when herd has a specific reason (e.g. nesting under `.pi/herd/worktrees/`).
+when herd has a specific reason (e.g. nesting under `.pi/herd-my-pi/worktrees/`).
 
 **Options considered:** reimplement worktree management in herd (git worktree
 add/remove directly); document `wt` only (no runtime dependency); wrap `wt`.
@@ -490,7 +490,7 @@ verbs) while delegating mechanics to `wt` — herd depends on `wt` being install
 worktrees` badge, computed from `wt list --format json` filtered to `herd/*`
 branches with changes or unpushed commits. Reconciliation is explicit:
 `/herd-merge <name>` (wraps `wt merge`) or `/herd-discard <name>` (wraps
-`wt remove`). Default in `.pi/herd/config.json`: `worktrees.autoDiscardOnClose
+`wt remove`). Default in `.pi/herd-my-pi/config.json`: `worktrees.autoDiscardOnClose
 = false`.
 
 **Options considered (pre-wt):** auto-discard on close; keep-for-review;
@@ -566,7 +566,7 @@ prototyping + wt-as-a-dev-tool) at low cost; the lifecycle verbs are thin
 
 ## D26. State model — `state.json` stores herd-unique fields only; widget JOINs `herdr pane list` live
 
-**Decision:** herd's shared `.pi/herd/state.json` stores **only** the fields
+**Decision:** herd's shared `.pi/herd-my-pi/state.json` stores **only** the fields
 herdr's own pane registry doesn't already track live: `paneId, name, type,
 workspaceId, model, thinking, workingTree, branch, worktreePath,
 lastActivityMs, startedMs, isMain`. Presence, `agent_status`, `cwd`, session

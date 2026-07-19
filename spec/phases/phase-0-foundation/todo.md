@@ -26,7 +26,7 @@ Foundation layer. No UI, no commands. Track progress here.
 - [ ] `closePane(paneId)` — `herdr pane close`
 - [ ] Test: base64 payload round-trips intact through `pane run`
 
-## Shared state IO (`.pi/herd/state.json`)
+## Shared state IO (`.pi/herd-my-pi/state.json`)
 - [ ] Define `PaneRow` type — **herd-unique fields only (D26)**: paneId, name, type, workspaceId, model, thinking, workingTree, branch, worktreePath, lastActivityMs, startedMs, isMain (NOT cwd/agent_status — live from herdr)
 - [ ] `loadState()` / atomic `saveState()` (temp + rename)
 - [ ] `writeSelfRow(row)` — merge/replace own row by paneId
@@ -36,7 +36,7 @@ Foundation layer. No UI, no commands. Track progress here.
 ## Config loading
 - [ ] `config.json` package defaults (glyphs, staleness thresholds, heartbeat interval, default pane direction, collision policy)
 - [ ] `config.json.example` documented
-- [ ] `loadConfig()` — merge `.pi/herd/config.json` over package defaults
+- [ ] `loadConfig()` — merge `.pi/herd-my-pi/config.json` over package defaults
 
 ## Heartbeat & self-update
 - [ ] Heartbeat interval (default ~2s, configurable) refreshes lastActivityMs + workingTree + own row

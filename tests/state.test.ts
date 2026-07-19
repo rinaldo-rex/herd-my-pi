@@ -15,7 +15,7 @@ import {
 let root: string;
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), "herd-"));
+  root = mkdtempSync(join(tmpdir(), "herd-my-pi-"));
 });
 afterEach(() => {
   rmSync(root, { recursive: true, force: true });
