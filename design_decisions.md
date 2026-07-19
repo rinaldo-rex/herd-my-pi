@@ -173,7 +173,7 @@ in a later phase if needed.
 **Decision:**
 - Elapsed text colored by threshold: green <2m, amber 2–10m, red >10m,
   **pulse** for the worst tier (>30m). Thresholds configurable in
-  `.pi/herd/config.json`.
+  `.pi/herd-my-pi/config.json`.
 - Current (focused) agent pinned to top with a `▶` marker.
 - Remaining rows sorted by last-activity descending so genuinely stale ones
   sink to the bottom (visible but not distracting).
@@ -209,7 +209,7 @@ roster, can herd any peer. The `★` is a label, not authority.
 ## D10. Surface glyph — ◆/◇ default, configurable, T/P preset
 
 **Decision:** Default glyphs: `◆` (tab) / `◇` (pane). Configurable via
-`.pi/herd/config.json`, with a built-in `T`/`P` "bulletproof" preset.
+`.pi/herd-my-pi/config.json`, with a built-in `T`/`P` "bulletproof" preset.
 
 **Options considered:** box-drawing siblings (▤/▥); brackets (⦗/⦘);
 plain letters (T/P); filled/hollow diamonds (◆/◇).
@@ -241,17 +241,17 @@ real need only when running multiple herds — Phase 3.
 
 ---
 
-## D12. Config home — `.pi/herd/config.json`, scaffolded by `/herd-init`
+## D12. Config home — `.pi/herd-my-pi/config.json`, scaffolded by `/herd-init`
 
-**Decision:** Herd-specific config lives in a dedicated `.pi/herd/config.json`,
+**Decision:** Herd-specific config lives in a dedicated `.pi/herd-my-pi/config.json`,
 scaffolded by `/herd-init` (idempotent + merge, `--force` to reset). Defaults
 also ship in the package's `config.json` as a fallback layer.
 
-**Options considered:** dedicated `.pi/herd/config.json`; merge into
+**Options considered:** dedicated `.pi/herd-my-pi/config.json`; merge into
 `.pi/settings.json` under a `herd` key; package `config.json` + project override.
 
 **Rationale:** `.pi/agent/` is a **global** path; the project equivalent is
-`.pi/`. A dedicated `.pi/herd/` subdir keeps herd config out of pi's own
+`.pi/`. A dedicated `.pi/herd-my-pi/` subdir keeps herd config out of pi's own
 settings schema and its merge semantics, while mirroring how the reference
 project kept a `config.json` + `config.json.example`. Layered defaults (package
 fallback + project override) give sensible out-of-box behavior with per-project
@@ -304,7 +304,7 @@ no "does my free text override the template?" ambiguity.
 per pi pane; the package is globally installed). They communicate by sending
 **base64-encoded extension commands** (`/herd-receive <base64>`) via
 `herdr pane run <targetPaneId>`. The display-only widget reads a shared
-`.pi/herd/state.json` that each instance writes with its own row
+`.pi/herd-my-pi/state.json` that each instance writes with its own row
 (model/thinking/last-activity/cwd/working-tree/paneId/name/is-main), refreshed
 on a timer. The `★`-main is tracked via `HERDR_HERD_MAIN_PANE` env passed to
 spawned children.
@@ -338,6 +338,13 @@ interactive pi you can drive by hand, and the `★`-main is just a labeled pane.
 Cost: a few `pane run` calls per push/pull and a small file write per
 heartbeat — trivial.
 
+> **Refined by [D26](#d26-state-model--statejson-stores-herd-unique-fields-only-widget-joins-herdr-pane-list-live):**
+> `state.json` stores **herd-unique fields only** (model/thinking/name/git-
+> state/timing/is-main); presence/`agent_status`/`cwd`/session path come **live
+> from `herdr pane list`** at render time, and the widget JOINs the two by
+> `paneId`. The shared-file channel stays; it just carries less, and nothing
+> goes stale.
+
 ---
 
 ## D16. Busy-target push — queue by default, `--force` interrupts
@@ -357,7 +364,7 @@ immediately — which is the whole point of the herd.
 ## D17. Name collisions — default error, configurable auto-suffix
 
 **Decision:** `/herd-new <existing-name>` errors by default; configurable to
-auto-suffix (`scout` → `scout-2`) in `.pi/herd/config.json`.
+auto-suffix (`scout` → `scout-2`) in `.pi/herd-my-pi/config.json`.
 
 **Rationale:** Error-by-default prevents accidental roster ambiguity (two
 "scout" rows); auto-suffix is an opt-in for users who spawn many similar agents.
@@ -378,7 +385,7 @@ baggage.
 ## D19. `/herd-init` safety — idempotent + merge, `--force` to reset
 
 **Decision:** `/herd-init` is idempotent and merge-only — it never overwrites
-user edits to `.pi/prompts/`, `.pi/agents/`, or `.pi/herd/config.json`. A
+user edits to `.pi/prompts/`, `.pi/agents/`, or `.pi/herd-my-pi/config.json`. A
 `--force` flag resets them to package defaults.
 
 **Rationale:** Users will customize the scaffolded templates and role agents;
@@ -451,7 +458,7 @@ don't need it.
 **Decision:** herd does **not** implement worktree management. It wraps the
 [Worktrunk](https://worktrunk.dev/) `wt` CLI, which is purpose-built for parallel
 AI agents in git worktrees:
-- `/herd-new --isolate` → `wt switch -c -x "pi …" herd/<name>` (create worktree
+- `/herd-new --isolate` → `wt switch -c -x "pi …" herd-my-pi/<name>` (create worktree
   + launch pi inside it in one shot).
 - `/herd-merge <name>` → `wt merge` (squash + rebase + fast-forward + remove
   worktree, with pre-merge hooks as local CI).
@@ -459,10 +466,10 @@ AI agents in git worktrees:
 - Roster working-tree state + the unmerged-worktrees badge → `wt list --format
   json`.
 
-Herd owns a **branch namespace** (`herd/<agent-name>`) and the UX; `wt` owns
+Herd owns a **branch namespace** (`herd-my-pi/<agent-name>`) and the UX; `wt` owns
 the worktree mechanics. Herd respects the user's `wt` config
 (`worktree-path` template) and only overrides per-invocation via `--config-set`
-when herd has a specific reason (e.g. nesting under `.pi/herd/worktrees/`).
+when herd has a specific reason (e.g. nesting under `.pi/herd-my-pi/worktrees/`).
 
 **Options considered:** reimplement worktree management in herd (git worktree
 add/remove directly); document `wt` only (no runtime dependency); wrap `wt`.
@@ -480,10 +487,10 @@ verbs) while delegating mechanics to `wt` — herd depends on `wt` being install
 
 **Decision:** When an isolated ephemeral agent's pane closes, its worktree is
 **never auto-deleted**. Instead, every widget shows a `⊕ N unmerged herd
-worktrees` badge, computed from `wt list --format json` filtered to `herd/*`
+worktrees` badge, computed from `wt list --format json` filtered to `herd-my-pi/*`
 branches with changes or unpushed commits. Reconciliation is explicit:
 `/herd-merge <name>` (wraps `wt merge`) or `/herd-discard <name>` (wraps
-`wt remove`). Default in `.pi/herd/config.json`: `worktrees.autoDiscardOnClose
+`wt remove`). Default in `.pi/herd-my-pi/config.json`: `worktrees.autoDiscardOnClose
 = false`.
 
 **Options considered (pre-wt):** auto-discard on close; keep-for-review;
@@ -504,7 +511,7 @@ clean tree) but not the default.
 
 **Decision:** Adopt **option 3** — a `compact-for-variants` prompt template
 (the 6th, shipping in Phase 1) that produces a structured **spawn plan** (a menu
-of N approaches, each with a one-line goal + suggested `herd/<name>` branch).
+of N approaches, each with a one-line goal + suggested `herd-my-pi/<name>` branch).
 The human executes that plan manually via `/herd-new --isolate` + `/herd-push` +
 `/herd-pull` per variant. **No first-class `/herd-variants` fan-out command** is
 built; it is rejected (not just deferred).
@@ -528,7 +535,7 @@ purest expression of "compaction is smart, transport is dumb, human orchestrates
 
 **Decision (updated, was "all in Phase 3"):** A **minimal cut** of worktree
 support lands in **Phase 1**: only `/herd-new --isolate` (wraps
-`wt switch -c -x "pi …" herd/<name>`) plus the spawned agent writing its
+`wt switch -c -x "pi …" herd-my-pi/<name>`) plus the spawned agent writing its
 worktree branch into its own state row (so the roster shows the branch). The
 `compact-for-variants` prompt template also ships in Phase 1 (the 6th
 template). The **lifecycle** — `/herd-merge`, `/herd-discard`, the
@@ -554,3 +561,35 @@ in Phase 2 (chosen); full worktree feature in Phase 1.
 + a hybrid roster source. The minimal cut captures the value (safe parallel
 prototyping + wt-as-a-dev-tool) at low cost; the lifecycle verbs are thin
 `wt merge`/`wt remove` wrappers that fit naturally in Phase 2's polish scope.
+
+---
+
+## D26. State model — `state.json` stores herd-unique fields only; widget JOINs `herdr pane list` live
+
+**Decision:** herd's shared `.pi/herd-my-pi/state.json` stores **only** the fields
+herdr's own pane registry doesn't already track live: `paneId, name, type,
+workspaceId, model, thinking, workingTree, branch, worktreePath,
+lastActivityMs, startedMs, isMain`. Presence, `agent_status`, `cwd`, session
+path, `focused`, `tab_id` come from `herdr pane list --workspace <id>` at
+render time (always fresh via the local socket). The roster =
+JOIN(`herdr pane list`, `state.json`) ON `paneId`; `readRoster(workspaceId)`
+performs this join.
+
+**Why:** confirmed against `herdr 0.7.4` — `herdr pane get`/`pane list` return
+structured JSON per pane with `agent` (e.g. `"pi"`), `agent_status`
+(`working|idle|blocked|unknown`), `cwd`, `agent_session.value` (the session
+`.jsonl` path), `focused`, `terminal_title`. Duplicating these into state.json
+(original D15) means herd-written copies go stale between heartbeats and need
+reconciliation. Reading herdr live eliminates that: presence is real-time,
+`agent_status` is real, and a pane missing from `pane list` = exited (trivial
+closed-pane detection, replacing heartbeat-based transients). state.json
+shrinks to the herd-unique supplements herdr genuinely can't know
+(model/thinking/name/git-state/timing/is-main).
+
+**Tradeoffs:** + no stale presence/status; + simpler closed-pane handling;
++ smaller state.json / less write contention. − roster read does one socket
+call per refresh (cheap — local unix socket, ms-scale); − `state.ts` depends
+on `herdr.ts` (both foundation modules, acceptable). Amends **D15**.
+
+**Options considered:** keep the full row in state.json (original D15);
+refine to herd-unique + live join (chosen).

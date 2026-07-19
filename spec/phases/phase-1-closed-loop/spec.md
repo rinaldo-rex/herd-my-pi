@@ -21,7 +21,7 @@ templates/roles that close the herd loop end-to-end. This is the first
 - Visibility is per-instance, in-memory; on startup, if `HERDR_HERD_WIDGET=1`
   is set (passed by `/herd-new` to spawned children), show the widget.
 - **Render model:** on a refresh timer (default ~1s, configurable), read
-  `.pi/herd/state.json` via Phase-0 `readRoster(myWorkspaceId)`, then:
+  `.pi/herd-my-pi/state.json` via Phase-0 `readRoster(myWorkspaceId)`, then:
   - Determine current pane via `readCurrentPaneId()`; pin that row to top with
     `▶`.
   - Mark the `★`-main row (paneId === `HERDR_HERD_MAIN_PANE`).
@@ -38,7 +38,7 @@ templates/roles that close the herd loop end-to-end. This is the first
 - Materializes into:
   - `.pi/prompts/*.md` — the five `compact-for-*` templates (editable).
   - `.pi/agents/*.md` — the four role agent definitions (editable).
-  - `.pi/herd/config.json` — herd config (glyphs, thresholds, intervals,
+  - `.pi/herd-my-pi/config.json` — herd config (glyphs, thresholds, intervals,
     collision policy, default pane direction) merged over package defaults.
 - Does NOT touch `.pi/settings.json` (pi auto-discovers `.pi/prompts/` and
   `.pi/agents/`).
@@ -62,8 +62,8 @@ templates/roles that close the herd loop end-to-end. This is the first
   respect `PI_SUBAGENT_SHELL_READY_DELAY_MS`-style ready delay (port from
   reference).
 - **`--isolate` flag (minimal Worktrunk integration, D21/D22):** instead of the
-  shared-tree spawn, run `wt switch -c -x "pi …" herd/<name>` in the new pane
-  — `wt` creates the worktree (branch `herd/<name>`, path per the user's
+  shared-tree spawn, run `wt switch -c -x "pi …" herd-my-pi/<name>` in the new pane
+  — `wt` creates the worktree (branch `herd-my-pi/<name>`, path per the user's
   `worktree-path` template) and launches pi inside it in one subprocess. The
   spawned agent writes its worktree `branch` + `worktreePath` into its own
   state row so the roster shows the branch. Requires `wt` installed +
@@ -103,7 +103,7 @@ templates/roles that close the herd loop end-to-end. This is the first
   `compact-for-prototype.md`, `compact-for-review.md`, `compact-for-handoff.md`,
   and `compact-for-variants.md` (6th — produces a parallel-prototype spawn
   plan: a menu of N approaches, each with a one-line goal + suggested
-  `herd/<name>` branch; the human executes it manually via
+  `herd-my-pi/<name>` branch; the human executes it manually via
   `/herd-new --isolate`).
   Each template: `argument-hint: "<focus>"`, references artifacts by path,
   redacts secrets, tailors to `$1`.

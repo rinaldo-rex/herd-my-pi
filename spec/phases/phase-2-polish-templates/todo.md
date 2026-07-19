@@ -16,7 +16,7 @@ Polish & templates. Track progress here.
 
 ## Templates & resume
 - [ ] `/herd-new --template <name>` spawn from saved template
-- [ ] `/herd-save <name>` write `.pi/herd/templates/<name>.json`
+- [ ] `/herd-save <name>` write `.pi/herd-my-pi/templates/<name>.json`
 - [ ] `/herd-resume <name>` re-instantiate agent shape
 - [ ] Template format (role+model+thinking+goal+type), not a pi agent definition
 
@@ -25,9 +25,9 @@ Polish & templates. Track progress here.
 - [ ] `/herd-unhide <name>`
 
 ## Worktree lifecycle (create landed in Phase 1)
-- [ ] `/herd-merge <name>` wraps `wt merge` (name→herd/<name> resolution, `-y` for hooks)
+- [ ] `/herd-merge <name>` wraps `wt merge` (name→herd-my-pi/<name> resolution, `-y` for hooks)
 - [ ] `/herd-discard <name>` wraps `wt remove`
-- [ ] `⊕ N unmerged herd worktrees` badge from `wt list --format json` (filter herd/* with changes/unpushed)
+- [ ] `⊕ N unmerged herd worktrees` badge from `wt list --format json` (filter herd-my-pi/* with changes/unpushed)
 - [ ] Per-role `isolate: true` warning: notify on spawn + persistent `⚠` row marker
 - [ ] Config default `worktrees.autoDiscardOnClose = false`
 

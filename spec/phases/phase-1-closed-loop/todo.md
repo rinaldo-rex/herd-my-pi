@@ -17,9 +17,9 @@ The closed herd loop. Track progress here.
 
 ## `/herd-init` — scaffold
 - [ ] `pi.registerCommand("herd-init", ...)`; `--force` flag
-- [ ] Idempotent merge into `.pi/prompts/`, `.pi/agents/`, `.pi/herd/config.json`
+- [ ] Idempotent merge into `.pi/prompts/`, `.pi/agents/`, `.pi/herd-my-pi/config.json`
 - [ ] Never overwrite existing user files unless `--force`
-- [ ] Create `.pi/herd/` dir + config.json from package defaults
+- [ ] Create `.pi/herd-my-pi/` dir + config.json from package defaults
 - [ ] Materialize 5 templates + 4 role agents (only if missing)
 
 ## `/herd-new` — spawn agent
@@ -32,7 +32,7 @@ The closed herd loop. Track progress here.
 - [ ] Name collision → error by default (configurable auto-suffix)
 - [ ] Ready-delay knob reuse (PI_SUBAGENT_SHELL_READY_DELAY_MS-style)
 - [ ] Write child's initial state row; auto-enable my widget
-- [ ] `--isolate` flag → run `wt switch -c -x "pi …" herd/<name>` in the new pane
+- [ ] `--isolate` flag → run `wt switch -c -x "pi …" herd-my-pi/<name>` in the new pane
 - [ ] Detect `wt` availability; error clearly if `--isolate` used without `wt`
 - [ ] Spawned agent writes worktree `branch` + `worktreePath` into its state row
 
@@ -67,7 +67,7 @@ The closed herd loop. Track progress here.
 
 ## Validation / integration
 - [ ] End-to-end: `/herd-init` → `/herd-new scout` → widget shows scout → `/herd-push scout` → scout receives → `/herd-pull scout` → orchestrator receives
-- [ ] End-to-end isolated: `/herd-new --isolate proto` → wt worktree created on `herd/proto` → roster shows branch → pane runs pi in the worktree
+- [ ] End-to-end isolated: `/herd-new --isolate proto` → wt worktree created on `herd-my-pi/proto` → roster shows branch → pane runs pi in the worktree
 - [ ] Verify base64 survives `pane run` (multiline/special chars)
 - [ ] Verify `/herd-receive` executes in target even if target is streaming
 - [ ] Verify ★-main marker + current-pane ▶ highlight move on focus change

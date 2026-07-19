@@ -1,0 +1,27 @@
+{
+  "name": "herd-my-pi",
+  "version": "0.1.0",
+  "description": "Human-orchestrated multi-pi-agent herding inside herdr — co-drive persistent panes with live, editable message ferrying. (Package: herd-my-pi. The /herd-* commands use 'herd' as a verb for meaningfulness only.)",
+  "keywords": [
+    "pi-package"
+  ],
+  "license": "MIT",
+  "type": "module",
+  "pi": {
+    "extensions": [
+      "./extensions"
+    ]
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^7.0.2",
+    "vitest": "^2.1.0"
+  }
+}

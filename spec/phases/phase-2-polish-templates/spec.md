@@ -25,7 +25,7 @@
 ### Templates & resume (ephemeral-but-templates model, D2)
 - `/herd-new --template <name>` — spawn from a saved template on disk.
 - `/herd-save <name>` — save the current pane's (model + thinking + role + goal)
-  as a template to `.pi/herd/templates/<name>.json`.
+  as a template to `.pi/herd-my-pi/templates/<name>.json`.
 - `/herd-resume <name>` — re-instantiate a previously-saved template (note: pi
   session resume itself is pi's native `/resume`; herd resume = re-spawn the
   *agent shape*, optionally pointing at a saved session).
@@ -39,17 +39,17 @@
 ### Worktree lifecycle (create landed in Phase 1; D22/D23/D25)
 - `/herd-merge <name>` — wraps `wt merge` (squash + rebase + fast-forward +
   remove worktree, with pre-merge hooks as local CI). Resolve `<name>` →
-  `herd/<name>` branch + worktree path from state row; drive `wt merge` with
+  `herd-my-pi/<name>` branch + worktree path from state row; drive `wt merge` with
   `-y`/`--yes` to avoid interactive hook-approval blocking.
 - `/herd-discard <name>` — wraps `wt remove` (removes worktree + branch).
 - `⊕ N unmerged herd worktrees` badge on every widget, computed from
-  `wt list --format json` filtered to `herd/*` branches with changes or
+  `wt list --format json` filtered to `herd-my-pi/*` branches with changes or
   unpushed commits. Replaces herd-side dirty-checking — wt already detects it.
 - Per-role `isolate: true` frontmatter warning: when a role expects isolation
   but the user spawned without `--isolate`, the child shows a `ctx.ui.notify`
   at spawn ("role expects isolation; running on shared tree") and a persistent
   `⚠` marker on that row in every widget.
-- Default in `.pi/herd/config.json`: `worktrees.autoDiscardOnClose = false`
+- Default in `.pi/herd-my-pi/config.json`: `worktrees.autoDiscardOnClose = false`
   (never auto-delete; surface via the badge instead).
 
 ### `compact-for-*` refinements
@@ -69,4 +69,4 @@
   subcommand (`pane focus`? `tab select`?) — differs for pane vs tab.
 - Template format vs role-agent format: a herd template is *not* a pi agent
   definition — it's the spawn-time choices (role + model + thinking + goal +
-  type). Keep it as a small JSON in `.pi/herd/templates/`.
+  type). Keep it as a small JSON in `.pi/herd-my-pi/templates/`.

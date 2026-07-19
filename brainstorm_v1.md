@@ -135,7 +135,7 @@ postmortem's five failures *by construction* (see philosophy.md).
 - **Staleness UI?** → Color-thresholded elapsed + pin current + stale sinks;
   pulse for worst tier (>30m), color-only for middle.
 - **Ship role agents?** → Yes, both templates AND role agent definitions.
-- **Config home?** → `.pi/herd/config.json` (dedicated), scaffolded by
+- **Config home?** → `.pi/herd-my-pi/config.json` (dedicated), scaffolded by
   `/herd-init`, layered over package defaults.
 - **Phase plan?** → Ratified (templates now in v1); `/herd-init` added.
 
@@ -164,7 +164,7 @@ resolved. Eight genuinely-open product questions surfaced; user addressed all:
    no model — simplifies push to a single editable message field.
 7. **Architecture** → ratified (after elaboration + RPC-vs-state.json
    justification): cooperative extension instances + base64 extension commands
-   over `herdr pane run` + shared `.pi/herd/state.json` + ★-main via env.
+   over `herdr pane run` + shared `.pi/herd-my-pi/state.json` + ★-main via env.
 8. **`/herd-init` safety** → idempotent + merge, `--force` to reset.
 
 ## The final model (consolidated)
@@ -173,7 +173,7 @@ resolved. Eight genuinely-open product questions surfaced; user addressed all:
   orchestrator pane (where the herd started), tracked via env.
 - **Transport:** `herdr pane run <paneId> "/herd-receive <base64>"` — base64
   extension commands typed into a target's pi input.
-- **Widget state:** shared `.pi/herd/state.json`; each instance writes its own
+- **Widget state:** shared `.pi/herd-my-pi/state.json`; each instance writes its own
   row (model, thinking, last-activity, cwd, working-tree, paneId, name,
   is-main); widget reads on a timer; "current" via `herdr pane current`.
 - **Commands (Phase 1):** `/herd` (toggle display-only widget), `/herd-init`
@@ -192,7 +192,7 @@ resolved. Eight genuinely-open product questions surfaced; user addressed all:
   (color-coded; pulse worst tier; pin current; stale sinks).
 - **Scope:** orchestrator's workspace only; hide/unhide (Phase 2); `--all`
   cross-workspace (Phase 3).
-- **Config:** `.pi/herd/config.json` (dedicated), layered over package
+- **Config:** `.pi/herd-my-pi/config.json` (dedicated), layered over package
   defaults; idempotent merge `/herd-init`, `--force` reset.
 - **Name collisions:** error by default, configurable auto-suffix.
 - **Closed pane:** transient "X exited" then drop.
@@ -213,7 +213,7 @@ management *designed for parallel AI agents* — a near-perfect fit. Key finding
 - `worktree-path` is a configurable template (user config or per-project via
   `[projects."host/owner/repo"]`), overridable per-invocation via `--config-set`
   or `WORKTRUNK_WORKTREE_PATH`. Default is a sibling dir. → herd doesn't impose a
-  location; it owns a `herd/<name>` branch namespace and respects wt's config.
+  location; it owns a `herd-my-pi/<name>` branch namespace and respects wt's config.
 - `wt merge` does squash+rebase+ff+remove-worktree with pre-merge hooks (local
   CI); `wt remove` discards; `wt list --format json` reports every worktree with
   changes/ahead/behind/unpushed/age.
@@ -223,7 +223,7 @@ management *designed for parallel AI agents* — a near-perfect fit. Key finding
    frontmatter; if a role expects isolation but spawned without `--isolate`, the
    child warns (notify + widget `⚠`).
 2. **Worktree home** → use `wt`'s configured template (respect user config);
-   herd owns the `herd/<name>` branch namespace; override per-invocation only if
+   herd owns the `herd-my-pi/<name>` branch namespace; override per-invocation only if
    needed. (User's instinct to "use wt's default" — formalized.)
 3. **Phasing** → keep in **Phase 3** (user decision; overrides my lean to pull it
    up). `compact-for-variants` template still ships in Phase 1.
