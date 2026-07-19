@@ -181,7 +181,7 @@ describe("formatClosedRow", () => {
       type: "pane",
       live: false,
     };
-    const line = formatClosedRow(row, { config, themeFg });
+    const line = formatClosedRow(row, { themeFg });
     expect(line).toContain("scout");
     expect(line).toContain("exited");
     expect(line).toContain("○");

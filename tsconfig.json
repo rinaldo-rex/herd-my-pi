@@ -10,7 +10,11 @@
     "skipLibCheck": true,
     "noEmit": true,
     "resolveJsonModule": true,
-    "allowImportingTsExtensions": false
+    "allowImportingTsExtensions": false,
+    "paths": {
+      "@earendil-works/pi-tui": ["./node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui/dist"],
+      "@earendil-works/pi-tui/*": ["./node_modules/@earendil-works/pi-coding-agent/node_modules/@earendil-works/pi-tui/dist/*"]
+    }
   },
   "include": ["src", "extensions", "tests"]
 }

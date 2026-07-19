@@ -264,3 +264,31 @@ export function sendEscape(paneId: string): boolean {
 export function closePane(paneId: string): boolean {
   return tryRun(["pane", "close", paneId]).ok;
 }
+
+/** Focus a tab by id — used by the interactive widget to switch to a pane's tab. */
+export function focusTab(tabId: string): boolean {
+  return tryRun(["tab", "focus", tabId]).ok;
+}
+
+/** List tabs in a workspace — used to resolve user-chosen tab labels per pane. */
+export function listTabs(workspaceId: string): Array<{ tab_id: string; label: string }> {
+  const r = tryRun(["tab", "list", "--workspace", workspaceId]);
+  if (!r.ok) return [];
+  const env = safeJson<{ result?: { tabs?: Array<{ tab_id: string; label: string }> } }>(r.stdout);
+  const tabs = env?.result?.tabs;
+  if (Array.isArray(tabs)) return tabs.map((t) => ({ tab_id: t.tab_id, label: t.label }));
+  return [];
+}
+
+/** Resolve a workspace_id → user-set label. */
+export function getWorkspaceLabel(workspaceId: string): string | null {
+  const r = tryRun(["workspace", "list"]);
+  if (!r.ok) return null;
+  const env = safeJson<{ result?: { workspaces?: Array<{ workspace_id: string; label: string }> } }>(r.stdout);
+  const workspaces = env?.result?.workspaces;
+  if (Array.isArray(workspaces)) {
+    const ws = workspaces.find((w) => w.workspace_id === workspaceId);
+    if (ws?.label) return ws.label;
+  }
+  return null;
+}

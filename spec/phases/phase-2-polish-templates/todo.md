@@ -3,10 +3,10 @@
 Polish & templates. Track progress here.
 
 ## Interactive widget (selectable rows → focus)
-- [ ] `ctx.ui.custom()` overlay (SelectList + DynamicBorder) on demand
-- [ ] `↑/↓` navigate, `Enter` focus target pane, `Esc` back to display-only
-- [ ] Focus via herdr (confirm subcommand for pane vs tab)
-- [ ] Reuse Phase-1 roster data/render
+- [x] `ctx.ui.custom()` overlay (SelectList + DynamicBorder) on demand
+- [x] `↑/↓` navigate, `Enter` focus target pane, `Esc` back to display-only
+- [x] Focus via herdr `tab focus` (confirmed: herdr 0.7.4 supports `tab focus <tabId>`)
+- [x] Reuse Phase-1 roster data/render (sortRows, formatElapsed, elapsedTier)
 
 ## Badge & widget polish
 - [ ] Thinking badge on rows

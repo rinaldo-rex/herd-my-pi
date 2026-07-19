@@ -21,6 +21,7 @@ import { registerHerdNew } from "./herd-new";
 import { registerHerdPush } from "./herd-push";
 import { registerHerdPull, registerHerdReceivePull } from "./herd-pull";
 import { registerHerd, maybeAutoShowWidget, stopWidgetOnShutdown, type WidgetState } from "./herd";
+import { registerHerdFocus } from "./herd-focus";
 
 export default function (pi: ExtensionAPI): void {
   let heartbeat: Heartbeat | null = null;
@@ -35,6 +36,7 @@ export default function (pi: ExtensionAPI): void {
   registerHerdPush(pi, projectRoot, configDirName);
   registerHerdPull(pi, projectRoot, configDirName);
   registerHerdReceivePull(pi);
+  registerHerdFocus(pi, projectRoot, configDirName);
 
   // Register the /herd toggle (returns widget state for lifecycle management)
   widgetState = registerHerd(pi, projectRoot, configDirName);

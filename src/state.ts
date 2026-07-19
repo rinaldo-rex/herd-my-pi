@@ -7,7 +7,7 @@
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { type HerdrPane, type PaneRow, type RosterRow, HERD_DIR_NAME } from "./types";
-import { listPanes } from "./herdr";
+import { listPanes, listTabs } from "./herdr";
 
 export function stateFilePath(projectRoot: string, configDirName = ".pi"): string {
   return join(projectRoot, configDirName, HERD_DIR_NAME, "state.json");
@@ -89,14 +89,20 @@ export function readRoster(
   projectRoot: string,
   configDirName = ".pi",
   panesProvider: (wsId: string) => HerdrPane[] = (wsId) => listPanes(wsId),
+  tabsProvider: (wsId: string) => Array<{ tab_id: string; label: string }> = (wsId) => listTabs(wsId),
 ): RosterRow[] {
   const live = panesProvider(workspaceId);
   const rows = loadState(projectRoot, configDirName);
   const byPane = new Map<string, PaneRow>(rows.map((r) => [r.paneId, r] as const));
+  // Build tab_id → label map
+  const tabLabels = new Map<string, string>();
+  for (const t of tabsProvider(workspaceId)) {
+    tabLabels.set(t.tab_id, t.label);
+  }
   const out: RosterRow[] = [];
 
   for (const p of live) {
-    out.push(joinPane(p, byPane.get(p.pane_id)));
+    out.push(joinPane(p, byPane.get(p.pane_id), tabLabels));
   }
   for (const h of rows) {
     if (!live.some((p) => p.pane_id === h.paneId)) {
@@ -120,9 +126,10 @@ export function readRoster(
   return out;
 }
 
-function joinPane(p: HerdrPane, h?: PaneRow): RosterRow {
+function joinPane(p: HerdrPane, h?: PaneRow, tabLabels?: Map<string, string>): RosterRow {
   return {
     paneId: p.pane_id,
+    tabId: p.tab_id,
     name: h?.name,
     type: h?.type,
     workspaceId: p.workspace_id ?? h?.workspaceId,
@@ -140,5 +147,7 @@ function joinPane(p: HerdrPane, h?: PaneRow): RosterRow {
     focused: p.focused,
     live: true,
     sessionPath: p.agent_session?.value,
+    terminalTitle: p.terminal_title_stripped,
+    tabLabel: tabLabels?.get(p.tab_id),
   };
 }

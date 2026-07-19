@@ -87,6 +87,15 @@ function getStatusDot(
 }
 
 /** Format a single roster row for the widget (inside the box). */
+/** Best-effort display name: state.json name, then herdr tab label, then terminal title, then paneId. */
+export function displayName(row: RosterRow): string {
+  if (row.name && row.name !== row.paneId) return row.name;
+  if (row.tabLabel && row.tabLabel.length > 0) return row.tabLabel;
+  if (row.terminalTitle && row.terminalTitle.length > 0) return row.terminalTitle;
+  return row.paneId;
+}
+
+/** Format a single roster row for the widget (inside the box). */
 export function formatRow(
   row: RosterRow,
   opts: {
@@ -110,7 +119,7 @@ export function formatRow(
     : themeFg("dim", dot);
 
   // Name
-  const name = row.name ?? row.paneId;
+  const name = displayName(row);
 
   // State text (working tree or "exited")
   const stateText = !row.live ? "exited" : row.workingTree ?? "";
@@ -146,12 +155,11 @@ export function formatRow(
 export function formatClosedRow(
   row: RosterRow,
   opts: {
-    config: Config;
     themeFg: (color: any, text: string) => string;
   },
 ): string {
-  const { config, themeFg } = opts;
-  const name = row.name ?? row.paneId;
+  const { themeFg } = opts;
+  const name = displayName(row);
   const dot = themeFg("dim", STATUS_DOT.dead);
   
   return `   ${dot} ${themeFg("dim", name)}  ${themeFg("dim", "exited")}`;
@@ -242,6 +250,7 @@ export function renderWidgetBox(
 export function renderEmptyBox(
   themeFg: (color: any, text: string) => string,
   width: number,
+  title = "Herd",
 ): string[] {
   const W = Math.max(20, width);
   const borderWidth = W - 2;
@@ -251,7 +260,7 @@ export function renderEmptyBox(
   const padLeft = Math.floor(pad / 2);
   const padRight = pad - padLeft;
 
-  const headerText = `─ Herd `;
+  const headerText = `─ ${title} `;
   const headerDash = Math.max(0, borderWidth - visibleLength(headerText));
   const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerDash)}${BOX.topRight}`;
 

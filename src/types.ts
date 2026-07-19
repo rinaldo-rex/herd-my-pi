@@ -78,6 +78,7 @@ export interface PaneRow {
  */
 export interface RosterRow {
   paneId: string;
+  tabId?: string;
   name?: string;
   type?: "tab" | "pane";
   workspaceId?: string;
@@ -95,6 +96,10 @@ export interface RosterRow {
   focused?: boolean;
   live: boolean;
   sessionPath?: string;
+  /** Fallback label from herdr's live terminal_title (when state.json has no name). */
+  terminalTitle?: string;
+  /** Tab label as set by the user in herdr (e.g. renamed tab). */
+  tabLabel?: string;
 }
 
 export interface Config {

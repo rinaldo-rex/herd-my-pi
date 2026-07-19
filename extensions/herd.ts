@@ -7,10 +7,9 @@
 // than the widget area and causes wrapping).
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { getCurrentPaneInfo } from "../src/herdr";
+import { getCurrentPaneInfo, readCurrentPaneId, getWorkspaceLabel } from "../src/herdr";
 import { loadConfig } from "../src/config";
 import { readRoster } from "../src/state";
-import { readCurrentPaneId } from "../src/herdr";
 import { formatRow, formatClosedRow, sortRows, renderWidgetBox, renderEmptyBox } from "./widget";
 import type { Config, RosterRow } from "../src/types";
 
@@ -33,6 +32,8 @@ export interface WidgetState {
   config: Config | null;
   projectRoot: string;
   configDirName: string;
+  /** Cached workspace label for the title bar (resolved once, refreshable). */
+  workspaceLabel: string;
 }
 
 const WIDGET_ID = "herd";
@@ -54,6 +55,7 @@ export function registerHerd(
     config: null,
     projectRoot,
     configDirName,
+    workspaceLabel: "Herd",
   };
 
   // Register the toggle command
@@ -98,8 +100,8 @@ function startWidget(ctx: ExtensionContext, state: WidgetState): void {
         if (!state.visible || !state.theme) return [];
         const themeFg = state.theme.fg.bind(state.theme);
         return state.lastEmpty
-          ? renderEmptyBox(themeFg, width)
-          : renderWidgetBox(state.lastRows, { title: "Herd", themeFg, width });
+          ? renderEmptyBox(themeFg, width, state.workspaceLabel)
+          : renderWidgetBox(state.lastRows, { title: state.workspaceLabel, themeFg, width });
       },
       invalidate: () => {
         // Nothing cached inside the component; data lives in state.
@@ -152,6 +154,9 @@ function refreshData(ctx: ExtensionContext, state: WidgetState): void {
   const themeFg = ctx.ui.theme.fg.bind(ctx.ui.theme);
   const now = Date.now();
 
+  // Resolve workspace label for the title bar
+  state.workspaceLabel = getWorkspaceLabel(id.workspaceId) ?? "Herd";
+
   // Track newly closed panes for transient display
   for (const row of roster) {
     if (!row.live && !state.closedPanes.has(row.paneId)) {
@@ -184,7 +189,7 @@ function refreshData(ctx: ExtensionContext, state: WidgetState): void {
   }
   for (const row of closedRows) {
     rows.push({
-      formatted: formatClosedRow(row, { config, themeFg }),
+      formatted: formatClosedRow(row, { themeFg }),
       isClosed: true,
     });
   }
