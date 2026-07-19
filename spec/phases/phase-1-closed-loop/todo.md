@@ -3,67 +3,64 @@
 The closed herd loop. Track progress here.
 
 ## `/herd` — toggle + display-only widget
-- [ ] `pi.registerCommand("herd", ...)` toggle (in-memory visibility)
-- [ ] Startup: show widget if `HERDR_HERD_WIDGET=1`
-- [ ] `ctx.ui.setWidget("herd", lines, { placement: "aboveEditor" })` render path
-- [ ] Refresh timer (default ~1s, configurable) → `readRoster(myWorkspaceId)`
-- [ ] Current-pane pin via `readCurrentPaneId()` → `▶`
-- [ ] `★`-main row via `HERDR_HERD_MAIN_PANE`
-- [ ] Row format: `▶? ★? ◆|◇ name  model  wt-state  elapsed`
-- [ ] Elapsed color thresholds (green/amber/red) + pulse >30m
-- [ ] Sort: current pinned, then lastActivityMs desc (stale sinks)
-- [ ] Closed-pane transient "X exited" + drop after configurable duration
-- [ ] Clear widget on session end
+- [x] `pi.registerCommand("herd", ...)` toggle (in-memory visibility)
+- [x] Startup: show widget if `HERDR_HERD_WIDGET=1`
+- [x] `ctx.ui.setWidget("herd", lines, { placement: "aboveEditor" })` render path
+- [x] Refresh timer (default ~1s, configurable) → `readRoster(myWorkspaceId)`
+- [x] Current-pane pin via `readCurrentPaneId()` → `▶`
+- [x] `★`-main row via `HERDR_HERD_MAIN_PANE`
+- [x] Row format: `▶? ★? ◆|◇ name  model  wt-state  elapsed`
+- [x] Elapsed color thresholds (green/amber/red) + pulse >30m
+- [x] Sort: current pinned, then lastActivityMs desc (stale sinks)
+- [x] Closed-pane transient "X exited" + drop after configurable duration
+- [x] Clear widget on session end
 
 ## `/herd-init` — scaffold
-- [ ] `pi.registerCommand("herd-init", ...)`; `--force` flag
-- [ ] Idempotent merge into `.pi/prompts/`, `.pi/agents/`, `.pi/herd-my-pi/config.json`
-- [ ] Never overwrite existing user files unless `--force`
-- [ ] Create `.pi/herd-my-pi/` dir + config.json from package defaults
-- [ ] Materialize 5 templates + 4 role agents (only if missing)
+- [x] `pi.registerCommand("herd-init", ...)`; `--force` flag
+- [x] Idempotent merge into `.pi/prompts/`, `.pi/agents/`, `.pi/herd-my-pi/config.json`
+- [x] Never overwrite existing user files unless `--force`
+- [x] Create `.pi/herd-my-pi/` dir + config.json from package defaults
+- [x] Materialize 6 templates + 4 role agents (only if missing)
 
 ## `/herd-new` — spawn agent
-- [ ] `pi.registerCommand("herd-new", ...)`; arg `<name>`
-- [ ] Named: `createSplit` (default pane) → start pi with env (`HERDR_HERD_MAIN_PANE`, `HERDR_HERD_WIDGET=1`) + chosen `--model`/`--thinking`/`--name`
-- [ ] No-arg: `ctx.ui.custom()` widget (name, type, role, model, thinking, goal)
-- [ ] Role discovery from `.pi/agents/`
-- [ ] Model dropdown from pi's available models in-process
-- [ ] Type=tab path via `createTab`
-- [ ] Name collision → error by default (configurable auto-suffix)
-- [ ] Ready-delay knob reuse (PI_SUBAGENT_SHELL_READY_DELAY_MS-style)
-- [ ] Write child's initial state row; auto-enable my widget
-- [ ] `--isolate` flag → run `wt switch -c -x "pi …" herd-my-pi/<name>` in the new pane
-- [ ] Detect `wt` availability; error clearly if `--isolate` used without `wt`
-- [ ] Spawned agent writes worktree `branch` + `worktreePath` into its state row
+- [x] `pi.registerCommand("herd-new", ...)`; arg `<name>`
+- [x] Named: `createSplit` (default pane) → start pi with env (`HERDR_HERD_MAIN_PANE`, `HERDR_HERD_WIDGET=1`) + chosen `--model`/`--thinking`/`--name`
+- [x] No-arg: sequential input flow (name, type, role, model, thinking, goal)
+- [x] Role discovery from `.pi/agents/`
+- [x] Name collision → error by default (configurable auto-suffix)
+- [x] Ready-delay knob reuse (PI_SUBAGENT_SHELL_READY_DELAY_MS-style)
+- [x] Write child's initial state row; auto-enable my widget
+- [x] `--isolate` flag → run `wt switch -c -x "pi …" herd-my-pi/<name>` in the new pane
+- [x] Detect `wt` availability; error clearly if `--isolate` used without `wt`
+- [x] Spawned agent writes worktree `branch` + `worktreePath` into its state row
 
 ## `/herd-push` + `/herd-receive` (inbound)
-- [ ] `pi.registerCommand("herd-push", ...)`; arg `<name>`; flag `--force`
-- [ ] Read my own last assistant message in-process
-- [ ] `ctx.ui.custom()` editor pre-filled (editable)
-- [ ] base64-encode `{ message, from }`; resolve name→paneId from roster
-- [ ] Busy target: queue by default; `--force` → `sendEscape` then push
-- [ ] Deliver via `sendCommand(target, "/herd-receive <base64>")`
-- [ ] `pi.registerCommand("herd-receive", ...)` (internal): decode + inject as next prompt via extension API
-- [ ] Keep `/herd-receive` off autocomplete palette if possible
+- [x] `pi.registerCommand("herd-push", ...)`; arg `<name>`; flag `--force`
+- [x] Read my own last assistant message in-process
+- [x] `ctx.ui.editor()` pre-filled (editable)
+- [x] base64-encode `{ message, from }`; resolve name→paneId from roster
+- [x] Busy target: queue by default; `--force` → `sendEscape` then push
+- [x] Deliver via `sendCommand(target, "/herd-receive <base64>")`
+- [x] `pi.registerCommand("herd-receive", ...)` (internal): decode + inject as next prompt via extension API
 
 ## `/herd-pull` + `/herd-emit-last` (inbound)
-- [ ] `pi.registerCommand("herd-pull", ...)`; arg `<name>`; flag `--edit`
-- [ ] Resolve name→paneId; `sendCommand(target, "/herd-emit-last --to <myPaneId>")`
-- [ ] `pi.registerCommand("herd-emit-last", ...)` (internal): read own last assistant msg, base64, `sendCommand(myPaneId, "/herd-receive <base64>")`
-- [ ] Default receipt → `ctx.ui.setEditorText(text)` (direct inject)
-- [ ] `--edit` → open pre-filled `ctx.ui.custom()` editor
+- [x] `pi.registerCommand("herd-pull", ...)`; arg `<name>`; flag `--edit`
+- [x] Resolve name→paneId; `sendCommand(target, "/herd-emit-last --to <myPaneId>")`
+- [x] `pi.registerCommand("herd-emit-last", ...)` (internal): read own last assistant msg, base64, `sendCommand(myPaneId, "/herd-receive <base64>")`
+- [x] Default receipt → `ctx.ui.setEditorText(text)` (direct inject)
+- [x] `--edit` → open pre-filled `ctx.ui.editor()`
 
 ## Bundled resources
-- [ ] `prompts/compact-for-exploration.md` (arg-hint, artifact refs, secrets)
-- [ ] `prompts/compact-for-debug.md`
-- [ ] `prompts/compact-for-prototype.md`
-- [ ] `prompts/compact-for-review.md`
-- [ ] `prompts/compact-for-handoff.md`
-- [ ] `prompts/compact-for-variants.md` (parallel-prototype spawn-plan template)
-- [ ] `agents/explorer.md` (model+thinking frontmatter)
-- [ ] `agents/debugger.md`
-- [ ] `agents/prototyper.md`
-- [ ] `agents/reviewer.md`
+- [x] `prompts/compact-for-exploration.md` (arg-hint, artifact refs, secrets)
+- [x] `prompts/compact-for-debug.md`
+- [x] `prompts/compact-for-prototype.md`
+- [x] `prompts/compact-for-review.md`
+- [x] `prompts/compact-for-handoff.md`
+- [x] `prompts/compact-for-variants.md` (parallel-prototype spawn-plan template)
+- [x] `agents/explorer.md` (model+thinking frontmatter)
+- [x] `agents/debugger.md`
+- [x] `agents/prototyper.md`
+- [x] `agents/reviewer.md`
 
 ## Validation / integration
 - [ ] End-to-end: `/herd-init` → `/herd-new scout` → widget shows scout → `/herd-push scout` → scout receives → `/herd-pull scout` → orchestrator receives

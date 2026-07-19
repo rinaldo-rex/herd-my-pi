@@ -1,16 +1,13 @@
-// herd-my-pi — Phase 0 entry point.
+// herd-my-pi — Phase 1 entry point.
 //
-// Thin lifecycle wiring only. NO commands, NO widget (those land in Phase 1).
+// Wires all Phase 1 commands and the display-only roster widget.
 // On session_start: write this instance's own state row + start the heartbeat.
-// On session_shutdown: stop the heartbeat + drop our row (it'll show as
-// `live:false` once herdr pane list stops reporting us, then age out).
+// On session_shutdown: stop heartbeat + stop widget + drop our row.
 //
 // Runs inside pi via jiti (TS, no build). `@earendil-works/pi-coding-agent` is
-// provided by the host — listed as a peerDependency. (Phase 1 will install it
-// locally for accurate tsc types of ExtensionAPI/ctx; for Phase 0 the live
-// `pi -e ./extensions` smoke test is the type/runtime gate.)
+// provided by the host — listed as a peerDependency.
 
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { getCurrentPaneInfo } from "../src/herdr";
 import { loadConfig } from "../src/config";
@@ -18,8 +15,29 @@ import { removeSelfRow, writeSelfRow } from "../src/state";
 import { startHeartbeat, type Heartbeat } from "../src/heartbeat";
 import type { PaneRow } from "../src/types";
 
+// Phase 1 commands
+import { registerHerdInit } from "./herd-init";
+import { registerHerdNew } from "./herd-new";
+import { registerHerdPush } from "./herd-push";
+import { registerHerdPull, registerHerdReceivePull } from "./herd-pull";
+import { registerHerd, maybeAutoShowWidget, stopWidgetOnShutdown, type WidgetState } from "./herd";
+
 export default function (pi: ExtensionAPI): void {
   let heartbeat: Heartbeat | null = null;
+  let widgetState: WidgetState | null = null;
+
+  const projectRoot = process.cwd(); // Will be overridden by ctx.cwd on session_start
+  let configDirName = CONFIG_DIR_NAME;
+
+  // Register all commands
+  registerHerdInit(pi);
+  registerHerdNew(pi, projectRoot, configDirName);
+  registerHerdPush(pi, projectRoot, configDirName);
+  registerHerdPull(pi, projectRoot, configDirName);
+  registerHerdReceivePull(pi);
+
+  // Register the /herd toggle (returns widget state for lifecycle management)
+  widgetState = registerHerd(pi, projectRoot, configDirName);
 
   pi.on("session_start", (_event, ctx) => {
     const id = getCurrentPaneInfo();
@@ -28,14 +46,12 @@ export default function (pi: ExtensionAPI): void {
     const config = loadConfig(ctx.cwd, CONFIG_DIR_NAME);
     const isMain = process.env.HERDR_HERD_MAIN_PANE === id.paneId;
 
-    // name: Phase 1's /herd-new sets HERD_MY_PI_NAME on the child; otherwise
-    // fall back to the paneId.
+    // name: /herd-new sets HERD_MY_PI_NAME on the child; otherwise fall back to paneId.
     const self: PaneRow = {
       paneId: id.paneId,
       name: process.env.HERD_MY_PI_NAME ?? id.paneId,
       type: "pane",
       workspaceId: id.workspaceId,
-      // model/thinking: best-effort from ctx.model (Phase 1 will read precisely).
       model: readModelId(ctx),
       workingTree: null,
       lastActivityMs: Date.now(),
@@ -51,11 +67,21 @@ export default function (pi: ExtensionAPI): void {
       intervalMs: config.intervals.heartbeatMs,
       self,
     });
+
+    // Auto-show widget if HERDR_HERD_WIDGET=1 (passed by /herd-new)
+    if (widgetState) {
+      maybeAutoShowWidget(pi, ctx, widgetState, ctx.cwd, CONFIG_DIR_NAME);
+    }
   });
 
   pi.on("session_shutdown", (_event, ctx) => {
     heartbeat?.stop();
     heartbeat = null;
+
+    if (widgetState) {
+      stopWidgetOnShutdown(widgetState);
+    }
+
     const id = getCurrentPaneInfo();
     if (id) removeSelfRow(ctx.cwd, id.paneId, CONFIG_DIR_NAME);
   });
