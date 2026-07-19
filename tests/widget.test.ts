@@ -194,7 +194,7 @@ describe("renderWidgetBox", () => {
       { formatted: "▶ ★ ● scout  clean  5s", isClosed: false },
       { formatted: "  ★ ● proto  dirty  3m", isClosed: false },
     ];
-    const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
+    const lines = renderWidgetBox(rows, { title: "Herd", themeFg, width: 80 });
     
     // Should have header + 2 rows + footer = 4 lines
     expect(lines).toHaveLength(4);
@@ -212,35 +212,36 @@ describe("renderWidgetBox", () => {
 
   it("includes title in header", () => {
     const rows = [{ formatted: "test", isClosed: false }];
-    const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
+    const lines = renderWidgetBox(rows, { title: "Herd", themeFg, width: 80 });
     expect(lines[0]).toContain("Herd");
   });
 
   it("all lines have the same visible width", () => {
-    // Mock terminal width for deterministic test
-    const realCols = process.stdout.columns;
-    Object.defineProperty(process.stdout, "columns", { value: 80, configurable: true });
-    try {
-      const rows = [
-        { formatted: themeFg("success", "●") + " scout  clean  5s", isClosed: false },
-        { formatted: themeFg("warning", "◐") + " proto  dirty  3m", isClosed: false },
-        { formatted: themeFg("dim", "○") + " old    exited 2h", isClosed: false },
-      ];
-      const lines = renderWidgetBox(rows, { title: "Herd", themeFg });
-      
-      const widths = lines.map(l => visibleLength(l));
-      // 3 rows + header + footer = 5 lines, all exactly 80 visible chars wide
-      expect(widths).toEqual([80, 80, 80, 80, 80]);
-      expect(new Set(widths).size).toBe(1);
-    } finally {
-      Object.defineProperty(process.stdout, "columns", { value: realCols, configurable: true });
-    }
+    const rows = [
+      { formatted: themeFg("success", "●") + " scout  clean  5s", isClosed: false },
+      { formatted: themeFg("warning", "◐") + " proto  dirty  3m", isClosed: false },
+      { formatted: themeFg("dim", "○") + " old    exited 2h", isClosed: false },
+    ];
+    const lines = renderWidgetBox(rows, { title: "Herd", themeFg, width: 80 });
+    
+    const widths = lines.map(l => visibleLength(l));
+    // 3 rows + header + footer = 5 lines, all exactly 80 visible chars wide
+    expect(widths).toEqual([80, 80, 80, 80, 80]);
+    expect(new Set(widths).size).toBe(1);
+  });
+
+  it("respects the passed width", () => {
+    const rows = [{ formatted: "scout  clean  5s", isClosed: false }];
+    const lines = renderWidgetBox(rows, { title: "Herd", themeFg, width: 40 });
+    const widths = lines.map(l => visibleLength(l));
+    expect(new Set(widths).size).toBe(1);
+    expect(widths[0]).toBe(40);
   });
 });
 
 describe("renderEmptyBox", () => {
   it("renders placeholder when no agents", () => {
-    const lines = renderEmptyBox(themeFg);
+    const lines = renderEmptyBox(themeFg, 80);
     
     // Should have header + 1 content + footer = 3 lines
     expect(lines).toHaveLength(3);

@@ -204,24 +204,19 @@ function getTerminalWidth(): number {
 
 /** Render the complete widget box with all rows.
  *
- *  Width math (all lines must be the same total width W = terminal width):
- *    borderWidth   = W - 2   (space between the two corner chars  ╭...╮ )
- *    contentWidth   = W - 4   (space between the │ borders, minus the 2 padding spaces)
- *
- *    header:  ╭ + title + dashes(borderWidth - titleLen) + ╮
- *    footer:  ╰ + dashes(borderWidth) + ╯
- *    content: │ + ' ' + padded(contentWidth) + ' ' + │
+ *  @param width  Total available viewport width (from the TUI render callback).
  */
 export function renderWidgetBox(
   rows: Array<{ formatted: string; isClosed: boolean }>,
   opts: {
     title: string;
     themeFg: (color: any, text: string) => string;
+    width: number;
   },
 ): string[] {
-  const { title, themeFg } = opts;
+  const { title, themeFg, width } = opts;
 
-  const W = getTerminalWidth();
+  const W = Math.max(20, width); // guard against tiny widths
   const borderWidth = W - 2; // between the two corner chars
   const contentWidth = W - 4; // between the two │ chars (incl. 1 pad space each side)
 
@@ -246,8 +241,9 @@ export function renderWidgetBox(
 /** Render a minimal placeholder box when no agents exist. */
 export function renderEmptyBox(
   themeFg: (color: any, text: string) => string,
+  width: number,
 ): string[] {
-  const W = getTerminalWidth();
+  const W = Math.max(20, width);
   const borderWidth = W - 2;
   const contentWidth = W - 4;
   const text = "No agents in herd";
