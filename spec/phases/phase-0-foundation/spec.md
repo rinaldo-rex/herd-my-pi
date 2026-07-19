@@ -4,7 +4,11 @@
 > state primitives that every command and the widget depend on. Pure
 > functions, fully testable in isolation.
 
-**Status:** not started · **Depends on:** nothing · **Unblocks:** Phase 1
+**Status:** done · **Merged:** PR #1 (squash `05a5968`) · **Unblocks:** Phase 1
+
+All items shipped. 20 tests pass, tsc clean, live 2-pane smoke test passed.
+State file: `.pi/herd-my-pi/state.json`. Naming: dir/branches use full
+package name; bare `herd` reserved for commands (`/herd-*`).
 
 ## Goal
 

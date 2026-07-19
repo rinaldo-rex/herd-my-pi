@@ -1,6 +1,6 @@
 # Phase 0 — Todo
 
-Foundation layer. No UI, no commands. Track progress here.
+**All done.** Moved to `done.md`. Merged as PR #1.
 
 ## herdr availability & identity
 - [ ] `isHerdrAvailable()` (HERDR_ENV + `herdr` on PATH, cached)
