@@ -3,9 +3,10 @@
 > Make the herd pleasant: interactive widget, badge polish, templates/resume,
 > noise control. None of this is needed to prove the concept.
 
-**Status:** in progress · **Depends on:** Phase 1 · **Unblocks:** Phase 3
+**Status:** done · **Depends on:** Phase 1 · **Unblocks:** Phase 3
 
-Interactive widget (`/herd-focus`) shipped (squash `3e69afa`).
+All items shipped. 66 tests pass, `tsc` clean. See `done.md` for the full
+checklist.
 
 ## Scope
 

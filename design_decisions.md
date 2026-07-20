@@ -598,9 +598,7 @@ refine to herd-unique + live join (chosen).
 
 ## Implementation status
 
-Status as of Phase 2 (partial — `/herd-focus` shipped, squash `3e69afa`).
-Decisions are realized as code only where noted; the rest remain design intent
-for later phases.
+Phases 0–2 complete. Decisions are realized as code where noted.
 
 - **Realized in Phase 0** (`src/`): D1 (human-only, no auto-spawn), D11
   (current-workspace roster scope via `readRoster`), D15/D26 (state.json stores
@@ -611,14 +609,17 @@ for later phases.
   default, configurable auto-suffix), D18 (closed-pane transients), D19
   (`/herd-init` idempotent merge + `--force`), and the minimal `--isolate` cut
   from D21/D22 (spawned agent writes its worktree `branch` + `worktreePath`).
-- **Realized in Phase 2** (partial — `extensions/herd-focus.ts`): D5
+- **Realized in Phase 2** (`extensions/`): D2 (`/herd-save`/`/herd-resume`/
+  `/herd-new --template` — agent shapes saved as HerdTemplate JSON), D5
   (interactive selectable widget — `/herd-focus` SelectList overlay with arrow
-  navigation, Enter to focus, Esc to dismiss). Also: named roster rows now
-  resolve herdr tab labels (`tabLabel`) and workspace labels (widget title bar)
-  via live herdr JOINs; `formatClosedRow` signature simplified.
-- **Deferred to Phase 2 (remaining)**: D2's `/herd-save`/`/herd-resume`, D17's
-  full template flow, D18's detail rows, and the worktree lifecycle from
-  D23/D24/D25 (`/herd-merge`/`/herd-discard`, the `⊕ N unmerged` badge, per-role
-  `isolate: true` warning).
+  navigation, Enter to focus, Esc to dismiss), D7 (thinking badges on rows),
+  D8 (pulse-vs-dim config; `/herd-stale` toggle), D11 follow-through
+  (`/herd-hide`/`/herd-unhide` with hidden set in state.json), D18 detail rows
+  (cycling widget modes: compact→detail→detailAll, with model/thinking/role/
+  goal/wt/session sub-lines), D22 worktree lifecycle (`/herd-merge` wraps
+  `wt merge -y`; `/herd-discard` wraps `wt remove`), D23 unmerged badge
+  (`⊕ N unmerged` from `wt list --format json`), D21 per-role `isolate: true`
+  warning (notify on spawn + persistent `⚠` row marker). All six
+  `compact-for-*` templates have `autocomplete-hint` + improved descriptions.
 - **Deferred to Phase 3**: D1's cooperative agent-side pull and optional
   lead-agent mode; cross-workspace `--all`.
