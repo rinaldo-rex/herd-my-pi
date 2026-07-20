@@ -10,5 +10,12 @@
   },
   "spawn": {
     "collisionPolicy": "auto-suffix"
+  },
+  "staleness": {
+    "pulseStyle": "dim"
+  },
+  "widget": {
+    "showDetail": true,
+    "staleFirst": false
   }
 }

@@ -9,7 +9,8 @@
   "staleness": {
     "amberMs": 120000,
     "redMs": 600000,
-    "pulseMs": 1800000
+    "pulseMs": 1800000,
+    "pulseStyle": "pulse"
   },
   "intervals": {
     "heartbeatMs": 2000,
@@ -23,5 +24,9 @@
   "worktrees": {
     "autoDiscardOnClose": false,
     "branchPrefix": "herd-my-pi/"
+  },
+  "widget": {
+    "showDetail": false,
+    "staleFirst": false
   }
 }

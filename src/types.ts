@@ -115,6 +115,7 @@ export interface Config {
     amberMs: number; // < amberMs => green
     redMs: number; // [amberMs, redMs) => amber
     pulseMs: number; // [redMs, pulseMs) => red; >= pulseMs => pulse
+    pulseStyle: "pulse" | "dim"; // pulse = alternate error/dim; dim = static dim
   };
   intervals: {
     heartbeatMs: number;
@@ -128,5 +129,10 @@ export interface Config {
   worktrees: {
     autoDiscardOnClose: boolean;
     branchPrefix: string;
+  };
+  /** Widget display options (Phase 2 polish). */
+  widget: {
+    showDetail: boolean; // expand detail sub-lines (model, wt, session)
+    staleFirst: boolean; // invert sort: most-stale at top instead of bottom
   };
 }

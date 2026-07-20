@@ -21,7 +21,9 @@ import { registerHerdNew } from "./herd-new";
 import { registerHerdPush } from "./herd-push";
 import { registerHerdPull, registerHerdReceivePull } from "./herd-pull";
 import { registerHerd, maybeAutoShowWidget, stopWidgetOnShutdown, type WidgetState } from "./herd";
+// Phase 2 commands
 import { registerHerdFocus } from "./herd-focus";
+import { registerHerdStale } from "./herd-stale";
 
 export default function (pi: ExtensionAPI): void {
   let heartbeat: Heartbeat | null = null;
@@ -41,6 +43,9 @@ export default function (pi: ExtensionAPI): void {
   // Register the /herd toggle (returns widget state for lifecycle management)
   widgetState = registerHerd(pi, projectRoot, configDirName);
 
+  // Phase 2: /herd-stale toggle
+  registerHerdStale(pi, widgetState);
+
   pi.on("session_start", (_event, ctx) => {
     const id = getCurrentPaneInfo();
     if (!id) return; // not inside herdr: nothing to herd
@@ -51,10 +56,11 @@ export default function (pi: ExtensionAPI): void {
     // name: /herd-new sets HERD_MY_PI_NAME on the child; otherwise fall back to paneId.
     const self: PaneRow = {
       paneId: id.paneId,
-      name: process.env.HERD_MY_PI_NAME ?? id.paneId,
+      name: process.env.HERDR_MY_PI_NAME ?? id.paneId,
       type: "pane",
       workspaceId: id.workspaceId,
       model: readModelId(ctx),
+      thinking: pi.getThinkingLevel(),
       workingTree: null,
       lastActivityMs: Date.now(),
       startedMs: Date.now(),
@@ -74,6 +80,22 @@ export default function (pi: ExtensionAPI): void {
     if (widgetState) {
       maybeAutoShowWidget(pi, ctx, widgetState, ctx.cwd, CONFIG_DIR_NAME);
     }
+  });
+
+  // Keep thinking in sync when user changes it mid-session (Phase 2)
+  pi.on("thinking_level_select", (event) => {
+    const id = getCurrentPaneInfo();
+    if (!id) return;
+    writeSelfRow(process.cwd(), {
+      paneId: id.paneId,
+      name: process.env.HERD_MY_PI_NAME ?? id.paneId,
+      type: "pane",
+      workspaceId: id.workspaceId,
+      thinking: event.level,
+      lastActivityMs: Date.now(),
+      startedMs: Date.now(),
+      isMain: process.env.HERDR_HERD_MAIN_PANE === id.paneId,
+    }, CONFIG_DIR_NAME);
   });
 
   pi.on("session_shutdown", (_event, ctx) => {

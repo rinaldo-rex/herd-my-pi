@@ -1,5 +1,6 @@
 // Roster widget utilities — row formatting, color thresholds, sorting, pulse.
 // Uses A5 (rounded corners) + A9 (accent dots) design.
+// Phase 2 polish: thinking badge, detail sub-lines, pulse-vs-dim config, stale-first sort.
 
 import type { Config, RosterRow } from "../src/types";
 
@@ -50,6 +51,7 @@ export function colorElapsed(
   tier: "green" | "amber" | "red" | "pulse",
   themeFg: (color: any, text: string) => string,
   pulsePhase: boolean,
+  pulseStyle: "pulse" | "dim" = "pulse",
 ): string {
   switch (tier) {
     case "green":
@@ -59,7 +61,8 @@ export function colorElapsed(
     case "red":
       return themeFg("error", text);
     case "pulse":
-      // Pulse: alternate between red and dim for attention
+      // Phase 2: configurable pulse-vs-dim for the worst tier.
+      if (pulseStyle === "dim") return themeFg("dim", text);
       return pulsePhase ? themeFg("error", text) : themeFg("dim", text);
   }
 }
@@ -86,13 +89,71 @@ function getStatusDot(
   }
 }
 
-/** Format a single roster row for the widget (inside the box). */
 /** Best-effort display name: state.json name, then herdr tab label, then terminal title, then paneId. */
 export function displayName(row: RosterRow): string {
   if (row.name && row.name !== row.paneId) return row.name;
   if (row.tabLabel && row.tabLabel.length > 0) return row.tabLabel;
   if (row.terminalTitle && row.terminalTitle.length > 0) return row.terminalTitle;
   return row.paneId;
+}
+
+/** Shorten thinking level for compact badge display (e.g. "high" → "🧠H"). */
+function thinkingBadgeShort(t: string): string {
+  const lower = t.toLowerCase();
+  if (lower === "low") return "L";
+  if (lower === "medium") return "M";
+  if (lower === "high") return "H";
+  if (lower === "extended" || lower === "xhigh") return "X";
+  return t.slice(0, 1).toUpperCase();
+}
+
+/** Format a thinking badge for compact row display. Returns "" if no thinking set. (Phase 2) */
+export function formatThinkingBadge(
+  row: RosterRow,
+  themeFg: (color: any, text: string) => string,
+): string {
+  if (!row.thinking) return "";
+  const short = thinkingBadgeShort(row.thinking);
+  return themeFg("accent", `🧠${short}`);
+}
+
+/** Shorten a filesystem path for display (keep last 2 segments). */
+function shortenPath(p: string): string {
+  const parts = p.split("/");
+  if (parts.length <= 2) return p;
+  return `…/${parts.slice(-2).join("/")}`;
+}
+
+/** Format detail sub-lines for a row (Phase 2 expanded mode).
+ *  Shows model id, thinking level, working-tree + branch, session path. */
+export function formatDetailLines(
+  row: RosterRow,
+  opts: {
+    themeFg: (color: any, text: string) => string;
+  },
+): string[] {
+  const { themeFg } = opts;
+  const muted = (s: string) => themeFg("dim", s);
+  const lines: string[] = [];
+
+  if (row.model) {
+    lines.push(`  ${muted("model:")} ${row.model}`);
+  }
+  if (row.thinking) {
+    lines.push(`  ${muted("thinking:")} ${row.thinking}`);
+  }
+  const wtParts: string[] = [];
+  if (row.workingTree) wtParts.push(row.workingTree);
+  if (row.branch) wtParts.push(`branch ${row.branch}`);
+  if (row.worktreePath) wtParts.push(shortenPath(row.worktreePath));
+  if (wtParts.length > 0) {
+    lines.push(`  ${muted("wt:")} ${wtParts.join(" · ")}`);
+  }
+  if (row.sessionPath) {
+    lines.push(`  ${muted("session:")} ${shortenPath(row.sessionPath)}`);
+  }
+
+  return lines;
 }
 
 /** Format a single roster row for the widget (inside the box). */
@@ -121,6 +182,9 @@ export function formatRow(
   // Name
   const name = displayName(row);
 
+  // Thinking badge (Phase 2)
+  const thinkingBadge = formatThinkingBadge(row, themeFg);
+
   // State text (working tree or "exited")
   const stateText = !row.live ? "exited" : row.workingTree ?? "";
   const coloredState = !row.live 
@@ -133,17 +197,18 @@ export function formatRow(
   const elapsedMs = row.lastActivityMs ? now - row.lastActivityMs : 0;
   const elapsed = row.lastActivityMs ? formatElapsed(elapsedMs) : "";
   const coloredElapsed = row.live 
-    ? colorElapsed(elapsed, tier, themeFg, pulsePhase)
+    ? colorElapsed(elapsed, tier, themeFg, pulsePhase, config.staleness.pulseStyle)
     : themeFg("dim", elapsed);
 
   // Compose row content (without borders)
-  // Format: ▶ ★ ● name  state  elapsed
+  // Format: ▶ ★ ● name  [🧠H] state  elapsed
   const parts = [
     currentMarker,
     mainMarker,
     coloredDot,
     " ",
     name,
+    thinkingBadge ? ` ${thinkingBadge}` : "",
     `  ${coloredState}`,
     `  ${coloredElapsed}`,
   ];
@@ -151,35 +216,47 @@ export function formatRow(
   return parts.join("");
 }
 
-/** Format a closed-pane transient row (inside the box). */
+/** Format a closed-pane transient row (inside the box).
+ *  Phase 2: shows remaining seconds before auto-removal. */
 export function formatClosedRow(
   row: RosterRow,
   opts: {
     themeFg: (color: any, text: string) => string;
+    remainingMs?: number;
   },
 ): string {
-  const { themeFg } = opts;
+  const { themeFg, remainingMs } = opts;
   const name = displayName(row);
   const dot = themeFg("dim", STATUS_DOT.dead);
-  
-  return `   ${dot} ${themeFg("dim", name)}  ${themeFg("dim", "exited")}`;
+
+  const countdown = remainingMs != null && remainingMs > 0
+    ? ` ${Math.ceil(remainingMs / 1000)}s`
+    : "";
+
+  return `   ${dot} ${themeFg("dim", name)}  ${themeFg("dim", `exited${countdown}`)}`;
 }
 
-/** Sort roster rows: current pinned top, then by lastActivityMs descending. */
-export function sortRows(rows: RosterRow[], currentPaneId: string | null): RosterRow[] {
+/** Sort roster rows: current pinned top, then by lastActivityMs.
+ *  `staleFirst` (Phase 2) inverts: oldest first — "what have I neglected." */
+export function sortRows(
+  rows: RosterRow[],
+  currentPaneId: string | null,
+  staleFirst = false,
+): RosterRow[] {
   return [...rows].sort((a, b) => {
     // Current pane always first
     if (a.paneId === currentPaneId) return -1;
     if (b.paneId === currentPaneId) return 1;
-    // Then by lastActivityMs descending (most recent first, stale sinks)
+    // Then by lastActivityMs
     const aMs = a.lastActivityMs ?? 0;
     const bMs = b.lastActivityMs ?? 0;
-    return bMs - aMs;
+    // staleFirst: oldest first (asc); default: most-recent first (desc)
+    return staleFirst ? aMs - bMs : bMs - aMs;
   });
 }
 
 /** Shorten a model ID for display (e.g. "anthropic/claude-sonnet-4-20250514" → "claude-sonnet-4"). */
-function shortModel(model: string): string {
+export function shortModel(model: string): string {
   // Strip provider prefix
   const parts = model.split("/");
   const id = parts.length > 1 ? parts[parts.length - 1] : model;
@@ -189,15 +266,40 @@ function shortModel(model: string): string {
 
 /** Strip ANSI escape codes for length calculation. */
 function stripAnsi(str: string): string {
-  // Match various ANSI escape code formats
   return str.replace(/\x1b\[[0-9;]*m|\[\d+m/g, "");
 }
 
-/** Pad a string to a target visible width (accounting for ANSI codes). */
+/** Truncate `str` to at most `maxWidth` visible columns, appending "…" when cut.
+ *  ANSI escapes are preserved — only visible characters count against the limit. */
+function truncateToWidth(str: string, maxWidth: number): string {
+  if (maxWidth <= 1) return "…".slice(0, maxWidth);
+  let visible = 0;
+  let i = 0;
+  const out: string[] = [];
+  while (i < str.length && visible < maxWidth - 1) {
+    const ch = str[i]!;
+    if (ch === "\x1b" && str[i + 1] === "[") {
+      // Copy the entire escape sequence verbatim
+      const start = i;
+      i += 2;
+      while (i < str.length && str[i] !== "m") i++;
+      if (i < str.length) i++; // include the 'm'
+      out.push(str.slice(start, i));
+      continue;
+    }
+    visible++;
+    out.push(ch);
+    i++;
+  }
+  if (i >= str.length) return str;
+  return out.join("") + "…";
+}
+
+/** Pad or truncate a string to exactly `targetWidth` visible columns. */
 function padVisible(str: string, targetWidth: number): string {
-  const visible = stripAnsi(str);
-  const padding = Math.max(0, targetWidth - visible.length);
-  return str + " ".repeat(padding);
+  const visible = visibleLength(str);
+  if (visible > targetWidth) return truncateToWidth(str, targetWidth);
+  return str + " ".repeat(Math.max(0, targetWidth - visible));
 }
 
 /** Get visible length of a string (without ANSI codes). */
@@ -205,40 +307,47 @@ export function visibleLength(str: string): number {
   return stripAnsi(str).length;
 }
 
-/** Get terminal width, falling back to 80. */
-function getTerminalWidth(): number {
-  return process.stdout.columns || 80;
-}
-
 /** Render the complete widget box with all rows.
+ *  Each row may carry optional detail sub-lines (Phase 2 expanded mode).
  *
  *  @param width  Total available viewport width (from the TUI render callback).
  */
 export function renderWidgetBox(
-  rows: Array<{ formatted: string; isClosed: boolean }>,
+  rows: Array<{ formatted: string; detail: string[]; isClosed: boolean }>,
   opts: {
     title: string;
     themeFg: (color: any, text: string) => string;
     width: number;
+    /** How many detail lines are visible (-1 = all, 0 = none, >0 = first N). */
+    detailDepth: number;
   },
 ): string[] {
-  const { title, themeFg, width } = opts;
+  const { title, themeFg, width, detailDepth } = opts;
 
   const W = Math.max(20, width); // guard against tiny widths
   const borderWidth = W - 2; // between the two corner chars
   const contentWidth = W - 4; // between the two │ chars (incl. 1 pad space each side)
 
-  // Header: ╭─ Title ────╮
-  const headerText = `─ ${title} `;
+  // Header: ╭─ Title [mode] ────╮
+  const modeTag = detailDepth > 0 ? " detail " : "";
+  const headerText = `─ ${title}${modeTag}`;
   const headerLen = visibleLength(headerText);
   const headerDash = Math.max(0, borderWidth - headerLen);
   const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerDash)}${BOX.topRight}`;
 
-  // Content rows: │ padded content │
-  const contentLines = rows.map(({ formatted }) => {
+  // Content rows: │ padded content │  + optional detail sub-lines
+  const contentLines: string[] = [];
+  for (const { formatted, detail } of rows) {
     const padded = padVisible(formatted, contentWidth);
-    return `${BOX.vertical} ${padded} ${BOX.vertical}`;
-  });
+    contentLines.push(`${BOX.vertical} ${padded} ${BOX.vertical}`);
+    // Phase 2: append detail sub-lines when in detail mode
+    if (detailDepth !== 0 && detail.length > 0) {
+      const count = detailDepth < 0 ? detail.length : Math.min(detailDepth, detail.length);
+      for (let i = 0; i < count; i++) {
+        contentLines.push(`${BOX.vertical} ${padVisible(detail[i], contentWidth)} ${BOX.vertical}`);
+      }
+    }
+  }
 
   // Footer: ╰────╯
   const footer = `${BOX.bottomLeft}${BOX.horizontal.repeat(borderWidth)}${BOX.bottomRight}`;

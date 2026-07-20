@@ -8,10 +8,11 @@ import { type Config, HERD_DIR_NAME } from "./types";
 const DEFAULTS: Config = {
   version: 1,
   glyphs: { agentFilled: "◆", agentOutline: "◇", current: "▶", main: "★" },
-  staleness: { amberMs: 120_000, redMs: 600_000, pulseMs: 1_800_000 },
+  staleness: { amberMs: 120_000, redMs: 600_000, pulseMs: 1_800_000, pulseStyle: "pulse" },
   intervals: { heartbeatMs: 2_000, widgetRefreshMs: 1_000, closedPaneLingerMs: 5_000 },
   spawn: { defaultDirection: "right", collisionPolicy: "error" },
   worktrees: { autoDiscardOnClose: false, branchPrefix: "herd-my-pi/" },
+  widget: { showDetail: false, staleFirst: false },
 };
 
 export function defaultConfig(): Config {
@@ -51,5 +52,6 @@ function mergeConfig(base: Config, user: Partial<Config>): Config {
     intervals: { ...base.intervals, ...(user.intervals ?? {}) },
     spawn: { ...base.spawn, ...(user.spawn ?? {}) },
     worktrees: { ...base.worktrees, ...(user.worktrees ?? {}) },
+    widget: { ...base.widget, ...(user.widget ?? {}) },
   };
 }
