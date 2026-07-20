@@ -1,6 +1,9 @@
 // /herd-push — ferry my last message to a target.
 // /herd-receive — inbound: decode + inject as next prompt.
+// Phase 2.1: --compact <template> injects a compact-for-* template, then you push.
 
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext } from "@earendil-works/pi-coding-agent";
 import { CONFIG_DIR_NAME } from "@earendil-works/pi-coding-agent";
 import { getCurrentPaneInfo, sendCommand, sendEscape } from "../src/herdr";
@@ -9,16 +12,20 @@ import { loadState } from "../src/state";
 import { HERD_DIR_NAME } from "../src/types";
 
 export function registerHerdPush(pi: ExtensionAPI, projectRoot: string, configDirName: string): void {
-  // /herd-push <name> [--force]
+  // /herd-push <name> [--force] [--compact <template> [<focus>]]
   pi.registerCommand("herd-push", {
-    description: "Ferry your last message to a target agent",
+    description: "Ferry your last message to a target agent. Use --compact <template> to run a compact prompt first.",
     handler: async (args, ctx) => {
-      const { name, force } = parsePushArgs(args);
-      if (!name) {
-        ctx.ui.notify("Usage: /herd-push <name> [--force]", "warning");
+      const parsed = parsePushArgs(args);
+      if (parsed.compact) {
+        await handleCompact(pi, ctx, parsed, projectRoot, configDirName);
         return;
       }
-      await handlePush(pi, ctx, name, force, projectRoot, configDirName);
+      if (!parsed.name) {
+        ctx.ui.notify("Usage: /herd-push <name> [--force] [--compact <template> [<focus>]]", "warning");
+        return;
+      }
+      await handlePush(pi, ctx, parsed.name, parsed.force, projectRoot, configDirName);
     },
   });
 
@@ -31,18 +38,43 @@ export function registerHerdPush(pi: ExtensionAPI, projectRoot: string, configDi
   });
 }
 
-function parsePushArgs(args: string): { name: string; force: boolean } {
+interface ParsedPushArgs {
+  name: string;
+  force: boolean;
+  compact: boolean;
+  compactTemplate: string;
+  compactFocus: string;
+}
+
+function parsePushArgs(args: string): ParsedPushArgs {
   const parts = args.trim().split(/\s+/);
   let name = "";
   let force = false;
-  for (const p of parts) {
+  let compact = false;
+  let compactTemplate = "";
+  let compactFocus = "";
+
+  let i = 0;
+  while (i < parts.length) {
+    const p = parts[i]!;
     if (p === "--force") {
       force = true;
-    } else if (!name) {
+    } else if (p === "--compact") {
+      compact = true;
+      i++;
+      if (i < parts.length) {
+        compactTemplate = parts[i]!;
+        i++;
+        // Rest is the focus arg ($1)
+        compactFocus = parts.slice(i).join(" ");
+        break;
+      }
+    } else if (!name && !p.startsWith("--")) {
       name = p;
     }
+    i++;
   }
-  return { name, force };
+  return { name, force, compact, compactTemplate, compactFocus };
 }
 
 async function handlePush(
@@ -59,7 +91,6 @@ async function handlePush(
     return;
   }
 
-  // Resolve target name → paneId from roster
   const state = loadState(projectRoot, configDirName);
   const target = state.find((r) => r.name === targetName);
   if (!target) {
@@ -67,25 +98,20 @@ async function handlePush(
     return;
   }
 
-  // Read my own last assistant message
   const lastMsg = getLastAssistantMessage(ctx);
   if (!lastMsg) {
     ctx.ui.notify("No assistant message to push", "warning");
     return;
   }
 
-  // Open editor widget pre-filled with the message
   const edited = await ctx.ui.editor(`Push to ${targetName}:`, lastMsg);
-  if (!edited) return; // User cancelled
+  if (!edited) return;
 
-  // If target is mid-turn and --force, send escape first
   if (force) {
     sendEscape(target.paneId);
-    // Small delay to let the escape take effect
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
 
-  // Encode and send
   const payload = Buffer.from(
     JSON.stringify({ message: edited, from: id.paneId }),
   ).toString("base64");
@@ -97,6 +123,103 @@ async function handlePush(
     ctx.ui.notify(`Failed to push to ${targetName}`, "error");
   }
 }
+
+// ---------------------------------------------------------------------------
+// Phase 2.1: --compact <template> [<focus>]
+// ---------------------------------------------------------------------------
+
+/** Discover prompt templates from .pi/prompts/ and the package bundle. */
+function discoverPrompts(projectRoot: string, configDirName: string): Array<{ name: string; description: string; file: string }> {
+  const prompts: Array<{ name: string; description: string; file: string }> = [];
+  const localDir = join(projectRoot, configDirName, "prompts");
+  // Package prompts live one level up from extensions/
+  const packageDir = join(import.meta.dirname ?? __dirname, "..", "prompts");
+
+  for (const dir of [localDir, packageDir]) {
+    if (!existsSync(dir)) continue;
+    try {
+      for (const f of readdirSync(dir)) {
+        if (!f.endsWith(".md")) continue;
+        const name = f.replace(/\.md$/, "");
+        if (prompts.some((p) => p.name === name)) continue;
+        const content = readFileSync(join(dir, f), "utf8");
+        const descMatch = content.match(/^description:\s*"(.+)"\s*$/m);
+        const desc = descMatch?.[1] ?? name;
+        prompts.push({ name, description: desc, file: f });
+      }
+    } catch { /* skip unreadable dirs */ }
+  }
+  return prompts;
+}
+
+async function handleCompact(
+  pi: ExtensionAPI,
+  ctx: ExtensionCommandContext,
+  parsed: ParsedPushArgs,
+  projectRoot: string,
+  configDirName: string,
+): Promise<void> {
+  const prompts = discoverPrompts(projectRoot, configDirName);
+
+  let tmplName = parsed.compactTemplate;
+  if (!tmplName) {
+    if (prompts.length === 0) {
+      ctx.ui.notify("No prompt templates found. Run /herd-init to scaffold them.", "warning");
+      return;
+    }
+    const names = prompts.filter((p) => p.name.startsWith("compact-for-")).map((p) => p.name);
+    if (names.length === 0) {
+      ctx.ui.notify("No compact-for-* templates found.", "warning");
+      return;
+    }
+    const choice = await ctx.ui.select("Choose a compact template:", names);
+    if (!choice) return;
+    tmplName = choice;
+  }
+
+  const match = prompts.find((p) => p.name === tmplName);
+  if (!match) {
+    const names = prompts.map((p) => p.name).join(", ");
+    ctx.ui.notify(`Template "${tmplName}" not found. Available: ${names}`, "error");
+    return;
+  }
+
+  // Read the template body (strip frontmatter)
+  let body: string;
+  try {
+    const srcDir = join(projectRoot, configDirName, "prompts");
+    const pkgDir = join(import.meta.dirname ?? __dirname, "..", "prompts");
+    const src = existsSync(join(srcDir, match.file)) ? srcDir : pkgDir;
+    body = readFileSync(join(src, match.file), "utf8");
+  } catch {
+    ctx.ui.notify(`Could not read template "${tmplName}"`, "error");
+    return;
+  }
+
+  body = body.replace(/^---[\s\S]*?\n---\n?/, "");
+
+  // Substitute $1
+  let focus = parsed.compactFocus;
+  if (!focus) {
+    focus = await ctx.ui.input(`Focus for ${tmplName}:`, "") ?? "";
+    if (!focus) return;
+  }
+  body = body.replace(/\$1/g, focus);
+
+  // Inject as the next prompt
+  if (ctx.isIdle()) {
+    pi.sendUserMessage(body);
+  } else {
+    pi.sendUserMessage(body, { deliverAs: "steer" });
+  }
+
+  const targetHint = parsed.name ? ` Then run /herd-push ${parsed.name}` : " Then run /herd-push <name>";
+  ctx.ui.notify(`Compacting with ${match.name}…${targetHint}.`, "info");
+}
+
+// ---------------------------------------------------------------------------
+// /herd-receive
+// ---------------------------------------------------------------------------
 
 function handleReceive(pi: ExtensionAPI, ctx: ExtensionCommandContext, base64: string): void {
   if (!base64) {
@@ -113,8 +236,6 @@ function handleReceive(pi: ExtensionAPI, ctx: ExtensionCommandContext, base64: s
       return;
     }
 
-    // Inject as the next prompt via pi.sendUserMessage
-    // Use deliverAs: "followUp" if we're streaming, or send directly if idle
     if (ctx.isIdle()) {
       pi.sendUserMessage(message);
     } else {
@@ -128,11 +249,9 @@ function handleReceive(pi: ExtensionAPI, ctx: ExtensionCommandContext, base64: s
 /** Read the last assistant message from the session. */
 function getLastAssistantMessage(ctx: ExtensionCommandContext): string | null {
   const entries = ctx.sessionManager.getEntries();
-  // Walk backwards to find the last assistant message
   for (let i = entries.length - 1; i >= 0; i--) {
     const entry = entries[i];
     if (entry.type === "message" && entry.message.role === "assistant") {
-      // Extract text content
       const content = entry.message.content;
       if (typeof content === "string") return content;
       if (Array.isArray(content)) {

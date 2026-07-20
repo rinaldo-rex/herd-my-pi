@@ -19,6 +19,7 @@ the v1 brainstorm.
 | Doc | What it is |
 |---|---|
 | [philosophy.md](./philosophy.md) | The core thesis, the control-axis flip, the five principles. Read first. |
+| [RECIPES.md](./RECIPES.md) | Scenario-based user guide — explore, debug, prototype, review, manage a herd. |
 | [design_decisions.md](./design_decisions.md) | ADR-style record: 20 decisions, options considered, rationale. |
 | [brainstorm_v1.md](./brainstorm_v1.md) | The living narrative of the brainstorm (research, rounds, refinements). |
 | [spec/phases/](./spec/phases/) | Per-phase spec + todo + done. |
