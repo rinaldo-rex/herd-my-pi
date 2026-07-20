@@ -62,6 +62,10 @@ export interface PaneRow {
   workspaceId: string;
   model?: string;
   thinking?: string;
+  /** Role name (e.g. "prototyper") set at spawn time. */
+  role?: string;
+  /** Free-text goal / extra context set at spawn time. */
+  goal?: string;
   workingTree?: "clean" | "dirty" | null;
   branch?: string;
   /** Set when spawned with `--isolate` (Phase 1+). */
@@ -69,6 +73,8 @@ export interface PaneRow {
   lastActivityMs: number;
   startedMs: number;
   isMain: boolean;
+  /** Active warnings for this agent (e.g. "isolate-expected"). */
+  warnings?: string[];
 }
 
 /**
@@ -84,6 +90,8 @@ export interface RosterRow {
   workspaceId?: string;
   model?: string;
   thinking?: string;
+  role?: string;
+  goal?: string;
   agent?: string;
   agentStatus?: AgentStatus;
   cwd?: string;
@@ -100,6 +108,19 @@ export interface RosterRow {
   terminalTitle?: string;
   /** Tab label as set by the user in herdr (e.g. renamed tab). */
   tabLabel?: string;
+  warnings?: string[];
+}
+
+/** A saved agent shape — spawn-time choices persisted to disk (D2).
+ *  Stored at `.pi/herd-my-pi/templates/<name>.json`.
+ *  NOT a pi agent definition — role+model+thinking+goal+type only. */
+export interface HerdTemplate {
+  name: string;
+  role?: string;
+  model?: string;
+  thinking?: string;
+  goal?: string;
+  type: "tab" | "pane";
 }
 
 export interface Config {
@@ -134,5 +155,9 @@ export interface Config {
   widget: {
     showDetail: boolean; // expand detail sub-lines (model, wt, session)
     staleFirst: boolean; // invert sort: most-stale at top instead of bottom
+  };
+  /** Phase 2 noise-control. Hides panes from the roster (per-workspace). */
+  hidden: {
+    paneIds: string[];
   };
 }

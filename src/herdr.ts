@@ -280,6 +280,75 @@ export function listTabs(workspaceId: string): Array<{ tab_id: string; label: st
   return [];
 }
 
+// --- Phase 2: Worktrunk (wt) wrappers for worktree lifecycle ---
+
+/** Check if `wt` (Worktrunk) is available on PATH. */
+export function isWtAvailable(): boolean {
+  return tryRunWt(["--version"]).ok;
+}
+
+function tryRunWt(args: string[]): HerdrRunResult {
+  try {
+    const stdout = execFileSync("wt", args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    return { ok: true, stdout, stderr: "", code: 0 };
+  } catch (e: unknown) {
+    const err = e as NodeJS.ErrnoException & { status?: number; stdout?: string; stderr?: string };
+    return {
+      ok: false,
+      stdout: err.stdout ?? "",
+      stderr: err.stderr ?? String(err?.message ?? err),
+      code: err.status ?? null,
+    };
+  }
+}
+
+/** Run `wt merge <branch>` — squash+rebase+ff+remove worktree. Uses `-y` for non-interactive. */
+export function wtMerge(branch: string): { ok: boolean; stdout: string; stderr: string } {
+  const r = tryRunWt(["merge", branch, "-y"]);
+  return { ok: r.ok, stdout: r.stdout, stderr: r.stderr };
+}
+
+/** Run `wt remove <branch>` — remove worktree + branch. */
+export function wtRemove(branch: string): { ok: boolean; stdout: string; stderr: string } {
+  const r = tryRunWt(["remove", branch]);
+  return { ok: r.ok, stdout: r.stdout, stderr: r.stderr };
+}
+
+/** Run `wt list --format json` and return the parsed result. */
+export function wtList(): WtListEntry[] {
+  const r = tryRunWt(["list", "--format", "json"]);
+  if (!r.ok) return [];
+  try {
+    return JSON.parse(r.stdout) as WtListEntry[];
+  } catch {
+    return [];
+  }
+}
+
+export interface WtListEntry {
+  branch?: string;
+  path?: string;
+  head?: string;
+  dirty?: boolean;
+  ahead?: number;
+  behind?: number;
+  unpushed?: boolean;
+  [key: string]: unknown;
+}
+
+/** Count unmerged herd worktrees (branches matching prefix with changes/unpushed). */
+export function countUnmergedHerdWorktrees(branchPrefix: string): number {
+  const entries = wtList();
+  return entries.filter((e) => {
+    const branch = e.branch ?? "";
+    if (!branch.startsWith(branchPrefix)) return false;
+    return e.dirty || (e.ahead ?? 0) > 0 || e.unpushed;
+  }).length;
+}
+
 /** Resolve a workspace_id → user-set label. */
 export function getWorkspaceLabel(workspaceId: string): string | null {
   const r = tryRun(["workspace", "list"]);

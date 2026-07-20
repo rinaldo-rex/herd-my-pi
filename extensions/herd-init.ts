@@ -33,10 +33,11 @@ async function scaffoldHerd(
   const promptsDir = join(configDir, "prompts");
   const agentsDir = join(configDir, "agents");
 
-  // Ensure directories exist
+  // Ensure directories exist (Phase 2: templates dir for herd-save/--template)
   mkdirSync(herdDir, { recursive: true });
   mkdirSync(promptsDir, { recursive: true });
   mkdirSync(agentsDir, { recursive: true });
+  mkdirSync(join(herdDir, "templates"), { recursive: true });
 
   let created = 0;
   let skipped = 0;

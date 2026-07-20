@@ -1,6 +1,7 @@
 ---
 argument-hint: "<focus>"
-description: "Review request — what changed, what to verify, artifact references"
+description: "Review request — what changed, what to verify against artifacts"
+autocomplete-hint: "compact-for-review <focus-area>"
 ---
 
 # Compact for Review

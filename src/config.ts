@@ -13,6 +13,7 @@ const DEFAULTS: Config = {
   spawn: { defaultDirection: "right", collisionPolicy: "error" },
   worktrees: { autoDiscardOnClose: false, branchPrefix: "herd-my-pi/" },
   widget: { showDetail: false, staleFirst: false },
+  hidden: { paneIds: [] },
 };
 
 export function defaultConfig(): Config {
@@ -53,5 +54,6 @@ function mergeConfig(base: Config, user: Partial<Config>): Config {
     spawn: { ...base.spawn, ...(user.spawn ?? {}) },
     worktrees: { ...base.worktrees, ...(user.worktrees ?? {}) },
     widget: { ...base.widget, ...(user.widget ?? {}) },
+    hidden: { ...base.hidden, ...(user.hidden ?? {}) },
   };
 }

@@ -1,6 +1,7 @@
 ---
 argument-hint: "<focus>"
 description: "Design-options brief — approaches with tradeoffs, no implementation"
+autocomplete-hint: "compact-for-prototype <focus-area>"
 ---
 
 # Compact for Prototype

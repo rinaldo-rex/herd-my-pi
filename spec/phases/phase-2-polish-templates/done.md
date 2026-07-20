@@ -1,37 +1,32 @@
 # Phase 2 — Done
 
-Merged as squash `3e69afa` on `main`.
+All items completed. No specific commit/PR refs yet — all landed together.
 
-## Interactive widget (selectable rows → focus)
-- [x] `/herd-focus` command — SelectList overlay (`ctx.ui.custom({ overlay: true })`)
-  built from same roster data as the display widget.
-- [x] `↑/↓` navigate, `Enter` focuses target pane via `herdr tab focus <tabId>`,
-  `Esc` dismisses. herdr 0.7.4 has no named-pane focus — tab focus is the best
-  available surface. If herdr adds `pane focus <paneId>`, it's a one-line change.
-- [x] Roster JOIN updated to propagate `tabId` from `HerdrPane` into `RosterRow`.
-- [x] Added `focusTab()` and `listTabs()` and `getWorkspaceLabel()` to
-  `src/herdr.ts`.
-- [x] Reuses Phase-1 widget utilities: `sortRows`, `formatElapsed`, `elapsedTier`.
-- [x] Wired into `extensions/index.ts`.
-- [x] 44 tests pass, `tsc --noEmit` clean.
-
-## Named roster rows (displayName helper)
-- [x] `displayName(row)` heuristic: state.json name → herdr tab label → terminal
-  title → raw paneId. Tab labels resolved via `herdr tab list` JOIN.
-- [x] Widget title bar now shows the herdr workspace label (`herdr workspace
-  list`), not a hardcoded "Herd".
-- [x] `RosterRow` gains `tabId`, `tabLabel`, `terminalTitle` fields.
-- [x] `formatClosedRow` signature simplified (removed unused `config` param).
-
-Files changed/added:
-- `extensions/herd-focus.ts` (new)
-- `extensions/index.ts` (+registerHerdFocus)
-- `extensions/herd.ts` (workspace label title, simplified formatClosedRow)
-- `extensions/widget.ts` (+displayName helper, renderEmptyBox title param)
-- `src/herdr.ts` (+focusTab, +listTabs, +getWorkspaceLabel)
-- `src/state.ts` (+tabLabels JOIN, +tabId/terminalTitle/tabLabel in joinPane)
-- `src/types.ts` (+tabId, +terminalTitle, +tabLabel on RosterRow)
-- `tests/widget.test.ts` (formatClosedRow signature fix)
-- `tsconfig.json` (paths mapping for @earendil-works/pi-tui transitively)
-
-Remaining Phase 2 items: see [todo.md](./todo.md).
+- [x] Interactive widget — `/herd-focus` overlay with SelectList, arrow-nav, Enter-to-focus, Esc-to-dismiss
+- [x] Thinking badge — compact `🧠H`/`🧠L`/`🧠M`/`🧠X` badges on rows
+- [x] Row detail — cycling widget modes (compact → detail → detailAll) with model/thinking/role/goal/wt/session sub-lines
+- [x] `--stale-first` / `/herd-stale` — toggle sort inversion from keyboard
+- [x] Pulse-vs-dim config — `staleness.pulseStyle` respected in `colorElapsed`
+- [x] `/herd-new --template <name>` — spawn from saved template
+- [x] `/herd-save <name>` — persist current agent shape to `.pi/herd-my-pi/templates/<name>.json`
+- [x] `/herd-resume <name>` — re-instantiate from a saved template
+- [x] Template format — role + model + thinking + goal + type (NOT a pi agent definition)
+- [x] `/herd-hide <name>` — suppress row (persists in state.json)
+- [x] `/herd-unhide <name>` — restore row
+- [x] Hidden set stored per-workspace in state.json (via paneId set)
+- [x] `/herd-merge <name>` — wraps `wt merge` with `-y` for non-interactive
+- [x] `/herd-discard <name>` — wraps `wt remove`
+- [x] `⊕ N unmerged herd worktrees` badge — computed from `wt list --format json`
+- [x] Per-role `isolate: true` warning — notify on spawn + persistent `⚠` row marker
+- [x] `config.worktrees.autoDiscardOnClose = false` default
+- [x] `compact-for-*` refinements — all 6 templates have `autocomplete-hint` + improved descriptions
+- [x] `exploration.md` template: added "always include a verdict" clause
+- [x] `PaneRow` extended: `role`, `goal`, `warnings` fields for Phase 2
+- [x] `RosterRow` extended: passes through role/goal/warnings
+- [x] `Config` extended: `hidden.paneIds` for noise control
+- [x] `state.ts` extended: `hidePane`, `unhidePane`, `getHiddenPaneIds`, `listTemplates`, `loadTemplate`, `saveTemplate`, `templatesDir`
+- [x] `readRoster` filters hidden panes
+- [x] `herdr.ts` extended: `isWtAvailable`, `wtMerge`, `wtRemove`, `wtList`, `countUnmergedHerdWorktrees`
+- [x] Widget: `⚠` warning badge on rows, unmerged worktree count in header
+- [x] `config.json` + `config.ts` updated with `hidden` key
+- [x] 66 tests pass, `tsc --noEmit` clean

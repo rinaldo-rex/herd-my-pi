@@ -125,7 +125,7 @@ function shortenPath(p: string): string {
 }
 
 /** Format detail sub-lines for a row (Phase 2 expanded mode).
- *  Shows model id, thinking level, working-tree + branch, session path. */
+ *  Shows role, goal, model id, thinking level, working-tree + branch, session path, warnings. */
 export function formatDetailLines(
   row: RosterRow,
   opts: {
@@ -134,8 +134,17 @@ export function formatDetailLines(
 ): string[] {
   const { themeFg } = opts;
   const muted = (s: string) => themeFg("dim", s);
+  const warn = (s: string) => themeFg("warning", s);
   const lines: string[] = [];
 
+  if (row.role) {
+    lines.push(`  ${muted("role:")} ${row.role}`);
+  }
+  if (row.goal) {
+    // Truncate long goals to ~60 chars
+    const goalShort = row.goal.length > 60 ? row.goal.slice(0, 57) + "…" : row.goal;
+    lines.push(`  ${muted("goal:")} ${goalShort}`);
+  }
   if (row.model) {
     lines.push(`  ${muted("model:")} ${row.model}`);
   }
@@ -152,11 +161,16 @@ export function formatDetailLines(
   if (row.sessionPath) {
     lines.push(`  ${muted("session:")} ${shortenPath(row.sessionPath)}`);
   }
+  // Phase 2: per-role isolate warning
+  if (row.warnings && row.warnings.includes("isolate-expected")) {
+    lines.push(`  ${warn("⚠ role expects isolation; running on shared tree")}`);
+  }
 
   return lines;
 }
 
-/** Format a single roster row for the widget (inside the box). */
+/** Compose a compact single-line row (no borders).
+ *  Phase 2: adds ⚠ warning for roles that expected isolation. */
 export function formatRow(
   row: RosterRow,
   opts: {
@@ -185,6 +199,11 @@ export function formatRow(
   // Thinking badge (Phase 2)
   const thinkingBadge = formatThinkingBadge(row, themeFg);
 
+  // Phase 2: ⚠ isolate-expected warning
+  const warnBadge = (row.warnings && row.warnings.includes("isolate-expected"))
+    ? themeFg("warning", " ⚠")
+    : "";
+
   // State text (working tree or "exited")
   const stateText = !row.live ? "exited" : row.workingTree ?? "";
   const coloredState = !row.live 
@@ -201,7 +220,7 @@ export function formatRow(
     : themeFg("dim", elapsed);
 
   // Compose row content (without borders)
-  // Format: ▶ ★ ● name  [🧠H] state  elapsed
+  // Format: ▶ ★ ● name  [🧠H] ⚠  state  elapsed
   const parts = [
     currentMarker,
     mainMarker,
@@ -209,6 +228,7 @@ export function formatRow(
     " ",
     name,
     thinkingBadge ? ` ${thinkingBadge}` : "",
+    warnBadge,
     `  ${coloredState}`,
     `  ${coloredElapsed}`,
   ];
@@ -320,20 +340,24 @@ export function renderWidgetBox(
     width: number;
     /** How many detail lines are visible (-1 = all, 0 = none, >0 = first N). */
     detailDepth: number;
+    /** Optional right-aligned badge (e.g. "⊕ 2 unmerged"). */
+    badge?: string;
   },
 ): string[] {
-  const { title, themeFg, width, detailDepth } = opts;
+  const { title, themeFg, width, detailDepth, badge } = opts;
 
   const W = Math.max(20, width); // guard against tiny widths
   const borderWidth = W - 2; // between the two corner chars
   const contentWidth = W - 4; // between the two │ chars (incl. 1 pad space each side)
 
-  // Header: ╭─ Title [mode] ────╮
+  // Header: ╭─ Title [mode] [badge ────] ╮
   const modeTag = detailDepth > 0 ? " detail " : "";
+  const badgeTag = badge ? ` ${badge} ` : "";
   const headerText = `─ ${title}${modeTag}`;
   const headerLen = visibleLength(headerText);
-  const headerDash = Math.max(0, borderWidth - headerLen);
-  const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerDash)}${BOX.topRight}`;
+  const badgeLen = visibleLength(badgeTag);
+  const headerDash = Math.max(0, borderWidth - headerLen - badgeLen);
+  const header = `${BOX.topLeft}${headerText}${BOX.horizontal.repeat(headerDash)}${badgeTag}${BOX.topRight}`;
 
   // Content rows: │ padded content │  + optional detail sub-lines
   const contentLines: string[] = [];

@@ -1,6 +1,7 @@
 ---
 argument-hint: "<focus>"
-description: "Parallel-prototype spawn plan — a menu of N approaches for /herd-new --isolate"
+description: "Parallel-prototype spawn plan — menu of N approaches for /herd-new --isolate"
+autocomplete-hint: "compact-for-variants <focus-area>"
 ---
 
 # Compact for Variants

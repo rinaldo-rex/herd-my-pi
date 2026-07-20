@@ -1,6 +1,7 @@
 ---
-argument-hint: "<focus>"
-description: "Reproduction brief — symptoms, suspects, ruled-out hypotheses, repro steps"
+argument-hint: "<symptoms>"
+description: "Bug repro briefing — symptoms, suspects, ruled-out, minimal repro steps"
+autocomplete-hint: "compact-for-debug <symptoms>"
 ---
 
 # Compact for Debug

@@ -1,6 +1,7 @@
 ---
 argument-hint: "<focus>"
 description: "Generic handoff — context, progress, next steps, blockers"
+autocomplete-hint: "compact-for-handoff <focus-area>"
 ---
 
 # Compact for Handoff

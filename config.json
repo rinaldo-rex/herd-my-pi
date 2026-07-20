@@ -28,5 +28,8 @@
   "widget": {
     "showDetail": false,
     "staleFirst": false
+  },
+  "hidden": {
+    "paneIds": []
   }
 }

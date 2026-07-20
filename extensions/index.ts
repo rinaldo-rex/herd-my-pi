@@ -24,6 +24,10 @@ import { registerHerd, maybeAutoShowWidget, stopWidgetOnShutdown, type WidgetSta
 // Phase 2 commands
 import { registerHerdFocus } from "./herd-focus";
 import { registerHerdStale } from "./herd-stale";
+import { registerHerdSave } from "./herd-save";
+import { registerHerdResume } from "./herd-resume";
+import { registerHerdHide } from "./herd-hide";
+import { registerHerdWorktree } from "./herd-worktree";
 
 export default function (pi: ExtensionAPI): void {
   let heartbeat: Heartbeat | null = null;
@@ -38,13 +42,17 @@ export default function (pi: ExtensionAPI): void {
   registerHerdPush(pi, projectRoot, configDirName);
   registerHerdPull(pi, projectRoot, configDirName);
   registerHerdReceivePull(pi);
-  registerHerdFocus(pi, projectRoot, configDirName);
 
   // Register the /herd toggle (returns widget state for lifecycle management)
   widgetState = registerHerd(pi, projectRoot, configDirName);
 
-  // Phase 2: /herd-stale toggle
+  // Phase 2: interactive + polish + templates + noise + worktree lifecycle
+  registerHerdFocus(pi, projectRoot, configDirName);
   registerHerdStale(pi, widgetState);
+  registerHerdSave(pi, projectRoot, configDirName);
+  registerHerdResume(pi, projectRoot, configDirName);
+  registerHerdHide(pi, projectRoot, configDirName);
+  registerHerdWorktree(pi, projectRoot, configDirName);
 
   pi.on("session_start", (_event, ctx) => {
     const id = getCurrentPaneInfo();

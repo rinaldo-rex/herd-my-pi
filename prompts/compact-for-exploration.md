@@ -1,6 +1,7 @@
 ---
 argument-hint: "<focus>"
-description: "Reconnaissance briefing — files, patterns, conventions, entry points"
+description: "Reconnaissance — map an unknown code area (files, patterns, conventions, entry points)"
+autocomplete-hint: "compact-for-exploration <focus-area>"
 ---
 
 # Compact for Exploration
@@ -36,3 +37,5 @@ $1
 - **Redact secrets** — strip API keys, tokens, passwords, and credentials
   from any output. Replace with `<REDACTED>`.
 - Keep the briefing under 500 words. Dense > comprehensive.
+- **Always include a verdict** — is this area ready for changes, or are
+  there blockers the orchestrator needs to resolve first?

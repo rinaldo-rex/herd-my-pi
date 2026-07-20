@@ -12,7 +12,7 @@
 // than the widget area and causes wrapping).
 
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
-import { getCurrentPaneInfo, readCurrentPaneId, getWorkspaceLabel } from "../src/herdr";
+import { getCurrentPaneInfo, readCurrentPaneId, getWorkspaceLabel, countUnmergedHerdWorktrees } from "../src/herdr";
 import { loadConfig } from "../src/config";
 import { readRoster, removeSelfRow } from "../src/state";
 import { formatRow, formatClosedRow, formatDetailLines, sortRows, renderWidgetBox, renderEmptyBox } from "./widget";
@@ -21,7 +21,6 @@ import type { Config, RosterRow } from "../src/types";
 /** Widget visibility / detail mode. */
 export type WidgetMode = "off" | "compact" | "detail" | "detailAll";
 
-/** State for the widget refresh loop. */
 export interface WidgetState {
   mode: WidgetMode;
   interval: ReturnType<typeof setInterval> | null;
@@ -44,6 +43,8 @@ export interface WidgetState {
   configDirName: string;
   /** Cached workspace label for the title bar (resolved once, refreshable). */
   workspaceLabel: string;
+  /** Cached unmerged worktree count (updated each refresh). */
+  unmergedWt: number;
 }
 
 const WIDGET_ID = "herd";
@@ -67,6 +68,7 @@ export function registerHerd(
     projectRoot,
     configDirName,
     workspaceLabel: "Herd",
+    unmergedWt: 0,
   };
 
   // Register the toggle command — cycles: off → compact → detail → detailAll → off
@@ -127,11 +129,13 @@ function startWidget(ctx: ExtensionContext, state: WidgetState, initialMode: Wid
           return renderEmptyBox(themeFg, width, state.workspaceLabel);
         }
         const detailDepth = state.mode === "detailAll" ? -1 : state.mode === "detail" ? 1 : 0;
+        const badge = state.unmergedWt > 0 ? `⊕ ${state.unmergedWt} unmerged` : undefined;
         return renderWidgetBox(state.lastRows, {
           title: state.workspaceLabel,
           themeFg,
           width,
           detailDepth,
+          badge,
         });
       },
       invalidate: () => {},
@@ -145,7 +149,7 @@ function startWidget(ctx: ExtensionContext, state: WidgetState, initialMode: Wid
     state.pulsePhase = !state.pulsePhase;
     refreshData(ctx, state);
     state.tui?.requestRender();
-  }, state.config.intervals.widgetRefreshMs);
+  }, state.config!.intervals.widgetRefreshMs);
 
   if (state.interval && typeof state.interval.unref === "function") {
     state.interval.unref();
@@ -193,6 +197,12 @@ function refreshData(ctx: ExtensionContext, state: WidgetState): void {
   const now = Date.now();
 
   state.workspaceLabel = getWorkspaceLabel(id.workspaceId) ?? "Herd";
+  // Count unmerged herd worktrees (best-effort; swallow errors if wt not installed)
+  try {
+    state.unmergedWt = countUnmergedHerdWorktrees(config.worktrees.branchPrefix);
+  } catch {
+    state.unmergedWt = 0;
+  }
 
   // Track newly dead panes (first time seen as dead — not already in closedPanes)
   for (const row of roster) {
