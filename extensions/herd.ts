@@ -148,7 +148,12 @@ export default function (pi: ExtensionAPI) {
 						const t = await runBackground({
 							name,
 							cwd: ctx.cwd,
-							labels: { ...(space && { "herdr.space": space }), "herd.parent": self, "herd.role": agent.name },
+							labels: {
+								...(space && { "herdr.space": space }),
+								"herd.parent": self,
+								"herd.role": agent.name,
+								"herd.template": agent.file,
+							},
 							outliveParent: outlive,
 							// hc terminals get the login environment, which may lack pi's node on PATH.
 							argv: ["env", `PATH=${process.env.PATH ?? ""}`, "pi", ...piArgs],
@@ -178,10 +183,10 @@ export default function (pi: ExtensionAPI) {
 					display: true,
 					content: [
 						`Herd started from this pi (${self}). Members, reachable with hc (see the herd-my-pi skill):`,
-						...herd.map((s) => `- ${s.name} (${s.address}): ${s.agent.description || s.agent.name}`),
+						...herd.map((s) => `- ${s.name} (${s.address}): ${s.agent.description || s.agent.name} [${s.agent.file}]`),
 						"",
-						"Offload to them: delegate research, reviews and scoped changes that fit a member, in parallel when independent,",
-						"and read their answers with herd_read. Do it yourself only for a single quick lookup.",
+						"On every prompt from the person, use the herd as you see fit, according to what each member is for",
+						"(its template file above), with as little back and forth as possible. Read answers with herd_read.",
 					].join("\n"),
 				},
 				{ deliverAs: "nextTurn" },

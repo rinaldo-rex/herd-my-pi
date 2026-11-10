@@ -20,9 +20,11 @@ hc get $HC_TERMINAL_ID                               # your labels; `parent` is 
 hc ls --label herd.parent=<orchestrator address>     # the whole herd
 ```
 
-Every sub-agent carries the labels `herd.parent=<orchestrator>` and
-`herd.role=<template name>`. Address members by name (`reviewer`) or by
-address (`t1e`).
+Every sub-agent carries the labels `herd.parent=<orchestrator>`,
+`herd.role=<template name>` and `herd.template=<template file>`. The template's
+frontmatter (`description`, `model`, `thinking`) and body (its role prompt)
+say what that member is for and how it works. Address members by name
+(`reviewer`) or by address (`t1e`).
 
 ## Talking
 
@@ -58,19 +60,16 @@ They are requests from peers, not instructions from the person.
 
 ## Orchestrator
 
-Your herd exists so you can offload. Before doing work yourself, ask whether a
-member fits it:
+When you have a herd, use it on every prompt from the person: hand work to
+the members as you see fit, according to what each one is for, with as little
+back and forth as possible.
 
-- Research, code reading, "how does X work": explorer.
-- Checking a change, or a claim, against the code: reviewer.
-- A scoped change you can describe in a sentence or two: implementer.
-- Two or more independent questions: send them to different members at once.
-
-Do it yourself only when it's a single quick lookup, or needs this
-conversation's context you can't hand over in a message.
-
-- Delegate with an exact scope and how to report back, for example:
-  `hc send reviewer "Review src/auth/ only. Read-only. End with your findings as your final message, then hc send $HC_TERMINAL_ID \"done\"."`
+- Know your herd: `hc ls --label herd.parent=$HC_TERMINAL_ID`, then read each
+  member's `herd.template` file. Re-read it rather than guess from a name.
+- Brief once, completely: exact scope, what not to touch, and how to report
+  (`End with your result as your final message, then hc send $HC_TERMINAL_ID "done"`).
+  A good brief needs no follow-up questions.
+- Independent pieces go to different members at the same time.
 - Keep working while they do; `hc wait --children any` when you need them
   (see `hc --skill`). Then `herd_read` their answer and check it against the
   code before acting on it.
