@@ -63,8 +63,12 @@ export default function (pi: ExtensionAPI) {
 	// session_start also fires after /new, /resume and forks, which change the file.
 	pi.on("session_start", async (_event, ctx) => {
 		const self = process.env.HC_TERMINAL_ID;
-		const file = ctx.sessionManager.getSessionFile();
-		if (self && file) await setLabels(self, { "herd.session": file }).catch(() => {});
+		if (!self) return;
+		// No file (--no-session): clear the label rather than leave an old session's path.
+		const file = ctx.sessionManager.getSessionFile() ?? "";
+		await setLabels(self, { "herd.session": file }).catch((e) =>
+			ctx.ui.notify(`herd: couldn't publish this session for herd_read: ${(e as Error).message}`, "warning"),
+		);
 	});
 
 	pi.registerTool({
@@ -80,19 +84,26 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({
 			member: Type.String({ description: "The member's hc name (e.g. reviewer) or address (e.g. t1x)" }),
 			last: Type.Optional(
-				Type.Integer({ minimum: 1, maximum: 10, description: "How many recent replies, oldest first (default 1)" }),
+				Type.Integer({ minimum: 1, maximum: 10, description: "How many recent answers (one per prompt it got), oldest first (default 1)" }),
 			),
 		}),
 		async execute(_id, params) {
 			const member = await getTerminal(params.member);
 			const file = member.labels?.["herd.session"];
 			if (!file)
-				throw new Error(`${params.member} (${member.address}) hasn't published a pi session; is herd-my-pi loaded in it?`);
+				throw new Error(
+					`${params.member} (${member.address}) hasn't published a pi session. It may have started before herd_read existed (/reload it), or run without herd-my-pi or a session file.`,
+				);
 			const replies = lastReplies(file, params.last ?? 1);
-			const who = `${member.name ?? member.address} (${member.address}, ${member.state})`;
+			const status = member.state === "finished" ? "exited" : (member.status?.state ?? "live");
+			const who = `${member.name ?? member.address} (${member.address}, ${status})`;
+			const caveat =
+				status === "working" || status === "blocked"
+					? `\n\nNote: ${who} is ${status}, so its latest turn may be unfinished; hc wait ${member.address} for the final answer.`
+					: "";
 			const text = replies.length
-				? replies.map((r, i) => `## ${who}, reply ${replies.length - i} from the end\n\n${r}`).join("\n\n")
-				: `${who} has no finished replies yet.`;
+				? replies.map((r, i) => `## ${who}: answer ${replies.length - i} from the end\n\n${r}`).join("\n\n") + caveat
+				: `${who} has no answers yet.${caveat}`;
 			return { content: [{ type: "text", text }], details: { member: member.address, file, count: replies.length } };
 		},
 	});

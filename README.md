@@ -25,6 +25,10 @@ pi install -l /path/to/herd-my-pi    # this project only
 /herd --outlive   same, but they keep running after this pi ends
 ```
 
+In the picker, **tab** chooses a model and **shift+tab** cycles thinking
+levels for the highlighted agent. A red `[model unavailable]` means you
+must choose another model or untick that agent before starting.
+
 `/herd` renames your tab to **Orchestrator**, then reads agents from
 `.pi/extensions/herd-my-pi/agents/*.md` in the project. If the project has
 none, it offers to copy the shipped agents there so you can edit and commit
@@ -50,5 +54,11 @@ You are the herd's reviewer. …
 
 The bundled `herd-my-pi` skill teaches every herd member the conventions:
 find the herd with `hc ls --label herd.parent=<orchestrator>`, message with
-`hc send`, report to the orchestrator when done or stuck, and ask the person
-in their own session when a decision is theirs.
+`hc send`, and ask the person in their own session when a decision is theirs.
+
+Members end a task with the full result as their final message, then send a
+one-line `hc send <orchestrator> "done: …"` (or a blocker). The orchestrator
+reads the answer with the `herd_read` tool: `member` is an hc name or address;
+`last` is how many recent answers to read (default 1). It reads the member's
+pi session via the `herd.session` label each pi publishes on its hc terminal,
+not a screen capture. Use `hc read` only to see what a member is doing now.

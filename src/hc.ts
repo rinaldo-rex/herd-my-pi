@@ -29,6 +29,8 @@ export interface Terminal {
 	name?: string | null;
 	parent?: string | null;
 	state: "live" | "finished";
+	/** What the program reports: working, idle, done, blocked, error. */
+	status?: { state?: string } | null;
 	labels?: Record<string, string>;
 }
 
