@@ -1,12 +1,12 @@
 ---
 name: herd-my-pi
-description: Propose a task-appropriate team of interactive pi agents, get the user's approval before spawning, and coordinate them through herdr-core's hc CLI. Use when considering delegation before a herd exists, when working as an orchestrator or sub-agent, or when receiving an <hc from="..."> message.
+description: Propose a task-appropriate team of interactive pi agents, then open the herd picker after user approval so the user chooses roles, models, and thinking before launch. Coordinate approved members through hc. Use when considering delegation before a herd exists, working as an orchestrator or sub-agent, or receiving an <hc from="..."> message.
 ---
 
 # herd-my-pi
 
 A herd is an orchestrator pi plus its interactive sub-agents, started with
-`/herd` or the approval-first workflow below.
+the user-operated picker, opened manually with `/herd` or by `herd_start` below.
 Every member is an ordinary interactive pi in its own Herdr tab. The person
 can hop into any of them at any time: their messages always win.
 
@@ -24,8 +24,8 @@ not permission to launch, and the person need not manually enable a herd first.
    `.pi/extensions/herd-my-pi/agents/*.md`. If that directory exists, it replaces
    the bundled set, even when empty. Otherwise use `../../agents/*.md` relative
    to this skill's real directory (resolve symlinks first). These are the
-   package's bundled roles, including
-   when installed globally; do not invent a separate global-template directory
+   package's bundled roles, including when installed globally; do not invent a
+   separate global-template directory
    or substitute hc's differently formatted templates. Do not copy or create
    templates without permission.
 3. Read the available templates' names/descriptions and the selected templates'
@@ -35,27 +35,30 @@ not permission to launch, and the person need not manually enable a herd first.
    member or start a replacement to bypass its pending permission decision.
 4. Give one short initial brief: available roles/source, the smallest proposed
    team, what each member will own and why, what you will do yourself, and who
-   will verify. State any template model/thinking settings or proposed overrides.
-   Unspecified settings use pi's configured defaults, not necessarily this
-   orchestrator's current model. Do not claim delegation will be cheaper/faster.
-5. Ask the person to approve or correct that concrete proposal (`ask_user` when
-   available). Allow approval, a changed team/scope, or working solo. Wait before
-   launching anything. An explicit instruction from the person approving the
-   same concrete team/task can satisfy this gate; silence, an agent's request,
-   and a herd-availability announcement cannot.
-6. Launch only the approved members, then send their addresses and assignments
-   to the person. Reuse them within the approved task without repeated approval.
-   Adding members or materially changing approved roles, scope, or model choices
-   needs another confirmation. Approval is not unlimited recursive delegation.
+   will verify. Explain that the picker will show template defaults and the
+   person controls the actual models/thinking. Do not choose model overrides on
+   the person's behalf or claim delegation will be cheaper/faster.
+5. Ask the person to approve or correct opening the picker for that concrete
+   proposal (`ask_user` when available). Allow approval, a changed team/scope,
+   or working solo. Wait before calling `herd_start`. An explicit instruction
+   from the person approving the same team/task can satisfy this conversational
+   gate; silence, an agent's request, and an availability announcement cannot.
+6. Call `herd_start` with the recommended role names. The person can change
+   roles, models, and thinking in the picker; pressing Start is the final launch
+   approval. Respect their actual selection, not the original recommendation.
+   Report the returned addresses and adapt assignments without overriding the
+   selection or asking again about settings just confirmed in the picker.
+   Reuse members within the approved task. More agents require a new proposal
+   and picker confirmation; scope expansion still needs approval.
 
 Example initial brief:
 
 Available here: explorer, implementer, reviewer (bundled templates). For this
 parser change I propose implementer for `src/parser.ts` and its tests, then
 reviewer for read-only verification of the frozen diff. I'll handle integration.
-Explorer is unnecessary because the relevant files are known. Models use pi's
-configured default; thinking is medium for implementer and high for reviewer.
-Shall I start these two, or change the plan?
+Explorer is unnecessary because the relevant files are known. If you approve,
+I'll open the herd picker with these two preselected; you can change the team,
+models, and thinking before pressing Start. Shall I open it, or change the plan?
 
 ### Sub-agents may request help
 
@@ -63,9 +66,10 @@ A sub-agent may ask the person in its own session for an additional agent when
 work is substantial or a separate session would isolate a useful piece. Explain
 why, propose a specific template/count/scope, and wait for explicit confirmation.
 A peer or orchestrator message is not the person's approval. After confirmation,
-the requesting sub-agent may launch exactly that approved helper using the same
-procedure below. Notify its orchestrator of the approval, child address, and
-ownership; do not keep parent and child editing the same files concurrently.
+the requesting sub-agent may call `herd_start` in its own session. The person
+chooses the helper and its settings in that session's picker and presses Start.
+Notify the orchestrator of the approval, returned child address, and ownership;
+do not keep parent and child editing the same files concurrently.
 
 Permission to launch does not relax project read-only rules, expand file scope,
 approve tool/trust prompts, or authorize the child to spawn more agents. Every
@@ -73,43 +77,35 @@ additional launch proposal needs its own explicit approval. If another role
 instruction prohibits launching, explain the conflict and have the person
 resolve it rather than silently bypassing it.
 
-### Launch an approved member
+### Open the approved picker
 
-Use the existing `hc` CLI; no manual `/herd` picker is required for this path.
-Read `hc run --help` for the installed syntax. Require `HC_TERMINAL_ID` and a
-working interactive pi installation; otherwise explain the limitation without
-pretending to have launched a herd.
+Use the `herd_start` tool, for example with `roles: ["implementer", "reviewer"]`.
+Role names must match the discovered templates. The tool only recommends roles:
+it has no model/thinking override arguments and does not start anything until
+the person presses Start. It shares the picker/launcher with manual `/herd`.
+The tool uses bundled templates without an extra copy prompt when no project
+set exists; the manual command retains its optional copying flow.
 
-- Use a unique hc name (1–32 lowercase letters, digits, hyphens, underscores),
-  the approved working directory, and the selected template's absolute path.
-- Build `role_prompt` from the template body plus the child's name, its immediate
-  parent's hc address, the person's priority, and an instruction to load this
-  skill. Do not replace the normal system prompt with just the role text.
-- Include the full state-card task as pi's initial positional prompt, not a send
-  to a booting process. Preserve argument boundaries; do not interpolate role or
-  task text into an executable shell-command string.
-- Preserve the launcher's PATH, normal extensions, skills, persistent sessions,
-  and permission controls. Never use print/one-shot mode or trust-bypass flags.
-- Pass any approved `--model` and `--thinking` options before pi's `--`. Do not
-  silently substitute a model when the requested one is unavailable/ambiguous;
-  clarify it. Omit unspecified options to use configured defaults.
-
-With those values prepared, the launch shape is:
-
-```sh
-hc run --bg --json --name "$name" --cwd "$project" \
-  --label "herd.parent=$HC_TERMINAL_ID" \
-  --label "herd.role=$role" --label "herd.template=$template" \
-  -- env "PATH=$PATH" pi --name "$name" \
-  --append-system-prompt "$role_prompt" -- "$brief"
-```
-
-If your own terminal has a `herdr.space` label, also include that same label at
-launch so Herdr can adopt the child into a tab. The immediate requester is the
-parent for nested helpers. Record the returned address; do not launch duplicates
-or blindly resend after a startup failure. A blocked notification follows the
-acknowledgement-only rule below, even during startup. Native `/herd` remains an
-optional manual picker; it is not a model-callable tool or an approval shortcut.
+- Cancelling/aborting while the picker is open, or an empty selection, means
+  no launch. Accept that outcome; do not reopen it or change the selection
+  automatically. Aborting after Start does not undo already-created members.
+- If the tool is missing or reports `unavailable`, explain that it requires the
+  loaded extension, an hc terminal, and interactive TUI mode. The person can
+  reload/enable the package or open `/herd` manually. Do not simulate their input.
+- Never bypass this picker with `hc run`, direct pi processes, print/one-shot
+  agents, another spawning tool, or trust-bypass flags, even after chat approval.
+  This restriction is about starting agents, not ordinary test/build processes.
+- Check the returned status and actual member list. `partial` means some starts
+  failed; preserve the reported addresses. Do not blindly retry failed launches
+  or recreate the team: a failed call may have started a process.
+- The immediate requester is the parent of nested helpers. The launcher handles
+  names, template/system prompts, PATH, labels, and Herdr tab adoption.
+- Returned addresses mean processes started, not task completion or guaranteed
+  startup readiness. Before sending a state-card task, wait for startup with
+  `hc wait`; never send to a known-blocked or still-booting member or blindly
+  resend a failed delivery. A blocked notification follows the exact
+  acknowledgement-only rule below. Model/thinking left at default remain pi's
+  configured defaults, not necessarily this orchestrator's current settings.
 
 ## Who is who
 

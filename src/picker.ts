@@ -22,10 +22,34 @@ interface ListState {
 	checked: Set<number>;
 	cursor: number;
 	field?: Field;
+	signal?: AbortSignal;
 }
 
-export async function pickAgents(ctx: ExtensionContext, agents: AgentTemplate[], source: string): Promise<HerdChoice[]> {
-	if (!agents.length) return [];
+interface PickerOptions {
+	recommended?: readonly string[];
+	signal?: AbortSignal;
+}
+
+/** Close a custom UI once, and remove the abort listener on completion/disposal. */
+function abortableDone<T>(signal: AbortSignal | undefined, done: (value: T) => void, cancelled: T) {
+	let closed = false;
+	const dispose = () => {
+		closed = true;
+		signal?.removeEventListener("abort", abort);
+	};
+	const finish = (value: T) => {
+		if (closed) return;
+		dispose();
+		done(value);
+	};
+	const abort = () => finish(cancelled);
+	signal?.addEventListener("abort", abort, { once: true });
+	if (signal?.aborted) abort();
+	return { finish, dispose };
+}
+
+export async function pickAgents(ctx: ExtensionContext, agents: AgentTemplate[], source: string, options: PickerOptions = {}): Promise<HerdChoice[]> {
+	if (!agents.length || options.signal?.aborted) return [];
 	const state: ListState = {
 		choices: agents.map((agent) => {
 			if (agent.thinking && !levelsFor().includes(agent.thinking as ThinkingLevel))
@@ -34,14 +58,16 @@ export async function pickAgents(ctx: ExtensionContext, agents: AgentTemplate[],
 			const thinking = (agent.thinking as ThinkingLevel | undefined) ?? modelThinking;
 			return { agent, model, modelError: error, thinking: model && thinking ? clampThinking(model, thinking) : thinking };
 		}),
-		checked: new Set(),
+		checked: new Set(agents.flatMap((agent, i) => options.recommended?.includes(agent.name) ? [i] : [])),
 		cursor: 0,
+		signal: options.signal,
 	};
 	for (;;) {
+		if (options.signal?.aborted) return [];
 		const action = await showList(ctx, state, source);
 		if (action.kind === "cancel") return [];
 		if (action.kind === "start") return state.choices.filter((_, i) => state.checked.has(i));
-		await chooseModel(ctx, state.choices[action.index]);
+		await chooseModel(ctx, state.choices[action.index], options.signal);
 		state.field = "model";
 	}
 }
@@ -49,6 +75,7 @@ export async function pickAgents(ctx: ExtensionContext, agents: AgentTemplate[],
 function showList(ctx: ExtensionContext, state: ListState, source: string): Promise<Action> {
 	return ctx.ui.custom<Action>(
 		(tui, theme, keybindings, done) => {
+			const { finish, dispose } = abortableDone<Action>(state.signal, done, { kind: "cancel" });
 			let problem: string | undefined;
 			let cached: { width: number; lines: string[] } | undefined;
 			const n = state.choices.length;
@@ -100,13 +127,13 @@ function showList(ctx: ExtensionContext, state: ListState, source: string): Prom
 						c.thinking = levels[(levels.indexOf(c.thinking ?? levels[levels.length - 1]) + 1) % levels.length];
 						state.field = "thinking";
 					} else if (matchesKey(data, "tab")) {
-						return done({ kind: "model", index: state.cursor });
+						return finish({ kind: "model", index: state.cursor });
 					} else if (keybindings.matches(data, "tui.select.confirm")) {
 						const blocked = state.choices.filter((ch, i) => state.checked.has(i) && ch.modelError);
-						if (!blocked.length) return done({ kind: "start" });
+						if (!blocked.length) return finish({ kind: "start" });
 						problem = `Unavailable model: ${blocked.map((b) => b.agent.name).join(", ")}. Tab to pick another, or untick.`;
 					} else if (keybindings.matches(data, "tui.select.cancel")) {
-						return done({ kind: "cancel" });
+						return finish({ kind: "cancel" });
 					} else return;
 					cached = undefined;
 					tui.requestRender();
@@ -114,6 +141,7 @@ function showList(ctx: ExtensionContext, state: ListState, source: string): Prom
 				invalidate() {
 					cached = undefined;
 				},
+				dispose,
 			};
 		},
 		{ blocked: { kind: "question", message: "Pick agents for the herd" } },
@@ -121,13 +149,14 @@ function showList(ctx: ExtensionContext, state: ListState, source: string): Prom
 }
 
 /** pi's own /model selector, for one agent. */
-function chooseModel(ctx: ExtensionContext, choice: HerdChoice): Promise<void> {
+function chooseModel(ctx: ExtensionContext, choice: HerdChoice, signal?: AbortSignal): Promise<void> {
 	return ctx.ui.custom<void>((tui, theme, _keybindings, done) => {
+		const { finish, dispose } = abortableDone<void>(signal, done, undefined);
 		const pick = (model: Model<Api>) => {
 			choice.model = model;
 			choice.modelError = undefined;
 			if (choice.thinking) choice.thinking = clampThinking(model, choice.thinking);
-			done();
+			finish();
 		};
 		const selector = new ModelSelectorComponent(
 			tui,
@@ -135,7 +164,7 @@ function chooseModel(ctx: ExtensionContext, choice: HerdChoice): Promise<void> {
 			runtimeOf(ctx),
 			ctx.scopedModels,
 			pick,
-			() => done(),
+			() => finish(),
 			undefined,
 		);
 		const header = new Text(theme.fg("accent", theme.bold(`Model for ${choice.agent.name}`)), 1, 0);
@@ -149,7 +178,7 @@ function chooseModel(ctx: ExtensionContext, choice: HerdChoice): Promise<void> {
 		});
 		return Object.assign(view, {
 			handleInput: (data: string) => selector.handleInput(data),
-			dispose: () => selector.dispose(),
+			dispose: () => { dispose(); selector.dispose(); },
 		});
 	}, { blocked: { kind: "question", message: `Pick a model for ${choice.agent.name}` } });
 }

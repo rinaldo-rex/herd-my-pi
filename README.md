@@ -51,16 +51,19 @@ There is no npm release assumed by these instructions.
 ## Five-minute quickstart
 
 1. In a Herdr terminal, open your working directory and start `pi`.
-2. Run `/herd` in pi's input.
-3. If prompted, copy the bundled agent templates into the project so you can
-   customize them. Declining uses the shipped templates without copying.
-4. Use **↑/↓** to move and **space** to select members. **Tab** opens pi's model
+2. Describe your task. If delegation would help, the agent discovers project
+   or bundled roles and proposes a team with scoped assignments.
+3. Approve or correct the proposal. After approval, the agent calls `herd_start`
+   to open the same picker as `/herd`, with recommended roles preselected.
+4. Use **↑/↓** to move and **space** to change members. **Tab** opens pi's model
    picker; choose a model you can use. **Shift+Tab** cycles thinking levels.
-   Press **Enter** to start, or **Esc** to cancel.
-5. Ask the orchestrator for a task, for example:
+   Press **Enter** to start the final selection, or **Esc** to cancel.
+5. The orchestrator receives the actual selected members and assigns their tasks.
+   Small tasks can stay solo; opening the picker never obliges you to start agents.
 
-   > Have the explorer map the authentication code, then ask the reviewer to
-   > identify risks. Keep both read-only and summarize their findings.
+You can still run `/herd` manually. If prompted, choose whether to copy bundled
+roles into the project. The agent-opened picker uses bundled roles directly
+when no project template directory exists; it does not copy files.
 
 The orchestrator receives the members' names, addresses, and template paths.
 It can delegate through `hc send`, wait through `hc wait`, and read full replies
@@ -70,13 +73,14 @@ The person's messages take priority.
 ### Example session
 
 ```text
-You: /herd
-     Select explorer and reviewer → choose available models → Enter
+You: Map src/ and review error handling. Keep it read-only.
+Agent: I recommend explorer for the map and reviewer for error handling.
+       Shall I open the herd picker?
+You: Yes.
+     Picker opens → adjust roles, models, thinking → Enter to start
 
 Herdr tabs: Orchestrator | explorer | reviewer
-
-You: Ask the explorer to map src/ and the reviewer to inspect error handling.
-     Don't change files. Summarize both reports.
+Agent: Assigns the scoped tasks and collects verified reports.
 ```
 
 This is an illustrative walkthrough, not a captured run. Member names receive
@@ -88,9 +92,32 @@ suffixes when another live terminal already has the same name.
 | --- | --- |
 | `/herd` | Pick and start members; they end when this pi's hc terminal ends. |
 | `/herd --outlive` | Start members that keep running after the parent terminal ends. |
+| `herd_start` tool | Open the same picker after approval, with recommended roles preselected. |
 | Space / `a` | Toggle one member / all members in the picker. |
 | Tab / Shift+Tab | Select a model / cycle thinking levels. |
 | `herd_read` tool | Read a member's latest replies from its pi session. |
+
+### Agent-opened picker
+
+`herd_start` accepts `roles`, an array of exact template names to recommend.
+It does **not** accept model/thinking overrides or a flag to skip confirmation.
+You can change any selection in the picker; only pressing Start launches it.
+The result returns the actual roles, addresses, template paths, and settings.
+Leaving a setting at default uses pi's configured default, not necessarily the
+orchestrator's current setting.
+
+Cancelling or deselecting everything starts nothing. The tool refuses non-TUI
+modes or a missing hc terminal, with no CLI-spawn fallback. Partial failures
+report the members that did start; do not blindly retry, since a failed call
+can still have created a process. Cancellation after Start does not undo
+already-created members.
+
+Sub-agents may also propose helpers and, after your approval, open this picker
+in their own session. They cannot authorize helpers themselves or bypass project
+read-only rules. `/herd --outlive` remains a manual option; tool-created members
+use the normal parent lifetime.
+
+### Reading results
 
 `herd_read` takes `member` (a local hc name or address). By default it checks
 only the **latest prompt**, including a pending prompt with no answer; it never

@@ -30,7 +30,7 @@ do not approve additional scripts without reviewing why they are needed.
 
 | Path | Responsibility |
 | --- | --- |
-| `extensions/herd.ts` | Extension registration, `/herd`, lifecycle, and `herd_read`. |
+| `extensions/herd.ts` | Shared picker/launcher for `/herd` and `herd_start`, lifecycle, and `herd_read`. |
 | `src/agents.ts` | Project/bundled template discovery and copying. |
 | `src/hc.ts` | Argument-array subprocess wrappers for `hc` and `herdr-app`. |
 | `src/models.ts`, `src/picker.ts` | Model resolution, thinking levels, and interactive selection. |
@@ -79,7 +79,14 @@ It starts real agents and can consume provider quota. Record the Node, pi,
 6. In disposable sessions, check default parent-lifetime behavior and
    `/herd --outlive`. Save any work, then explicitly stop only the test members
    you started. Never use a core-wide stop/restart for cleanup.
-7. If relevant, repeat without the desktop app in an isolated test environment;
+7. Ask the orchestrator to propose a team, approve opening the picker, then
+   cancel it. No members should start. Repeat and change a recommended role,
+   model, and thinking setting before Start. Verify the actual selection is
+   returned immediately and used for assignments, not the original proposal.
+   In a disposable sub-agent session, check the same approved-helper flow and
+   immediate-parent labels. Do not inspect any session that reports blocked;
+   leave its picker/permission/question for the person.
+8. If relevant, repeat without the desktop app in an isolated test environment;
    members should remain inspectable through hc even without tabs.
 
 Passing unit tests is not a substitute for these checks. Do not describe a

@@ -82,6 +82,33 @@ test("picker toggles all, navigates, cancels, and keeps rendering within narrow 
 	assert.deepEqual(await pickAgents(ctx, [agent()], "test"), []);
 });
 
+test("recommendations are preselected but only the user's final selection is returned", async () => {
+	const ctx = context();
+	drive(ctx, [(view) => {
+		assert.match(view.render(240).join("\n"), /\[x\] scout/);
+		assert.match(view.render(240).join("\n"), /\[ \] other/);
+		press(view, " ", "down", " ", "enter");
+	}]);
+	const choices = await pickAgents(ctx, [agent(), agent({ name: "other" })], "test", { recommended: ["scout"] });
+	assert.deepEqual(choices.map((choice) => choice.agent.name), ["other"]);
+});
+
+test("abort closes both the herd picker and nested model selector without a selection", async () => {
+	initTheme("dark", false);
+	for (const nested of [false, true]) {
+		const ctx = context();
+		const controller = new AbortController();
+		const stages = nested
+			? [(view: View) => press(view, "\t"), () => controller.abort()]
+			: [() => controller.abort()];
+		drive(ctx, stages);
+		assert.deepEqual(await pickAgents(ctx, [agent()], "test", { recommended: ["scout"], signal: controller.signal }), []);
+	}
+	const ctx = context();
+	drive(ctx, []);
+	assert.deepEqual(await pickAgents(ctx, [agent()], "test", { signal: AbortSignal.abort() }), []);
+});
+
 test("unresolved models cannot start until unchecked", async () => {
 	const ctx = context([]);
 	drive(ctx, [(view) => {

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
-import { readFileSync, rmSync, statSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import test from "node:test";
-import type { ExtensionAPI, ExtensionCommandContext, ExtensionContext, ExtensionToolContext, ToolDefinition } from "@earendil-works/pi-coding-agent";
+import { initTheme, type ExtensionAPI, type ExtensionCommandContext, type ExtensionContext, type ExtensionToolContext, type ToolDefinition } from "@earendil-works/pi-coding-agent";
+import type { Component } from "@earendil-works/pi-tui";
+import { PROJECT_AGENTS_DIR } from "../src/agents.ts";
 import herd, { uniqueName } from "../extensions/herd.ts";
-import { assistant, context, fakeCLI, header, message, sandbox, sessionFile, setEnv } from "./helpers.ts";
+import { assistant, context, fakeCLI, header, message, model, sandbox, sessionFile, setEnv } from "./helpers.ts";
 
 type Command = Parameters<ExtensionAPI["registerCommand"]>[1];
 function register() {
@@ -20,8 +23,8 @@ function register() {
 	return { events, tools, commands, messages };
 }
 
-function commandContext(t: Parameters<typeof sandbox>[0]): { ctx: ExtensionCommandContext; notifications: string[] } {
-	const ctx = context() as ExtensionCommandContext;
+function commandContext(t: Parameters<typeof sandbox>[0], stages?: ((view: Component) => void)[]): { ctx: ExtensionCommandContext & ExtensionToolContext; notifications: string[] } {
+	const ctx = context() as ExtensionCommandContext & ExtensionToolContext;
 	ctx.cwd = sandbox(t);
 	const notifications: string[] = [];
 	ctx.ui.notify = (text) => { notifications.push(text); };
@@ -29,10 +32,21 @@ function commandContext(t: Parameters<typeof sandbox>[0]): { ctx: ExtensionComma
 	ctx.ui.custom = (async (factory) => {
 		const { promise, resolve } = Promise.withResolvers<unknown>();
 		const theme = { fg: (_color: string, text: string) => text, bg: (_color: string, text: string) => text, bold: (text: string) => text };
-		const keys = { matches: (data: string, key: string) => data === "enter" && key === "tui.select.confirm" };
+		const bindings: Record<string, string> = { "tui.select.up": "up", "tui.select.down": "down", "tui.select.confirm": "enter", "tui.select.cancel": "cancel" };
+		const keys = { matches: (data: string, key: string) => data === bindings[key] };
 		const view = await factory({ requestRender() {} } as never, theme as never, keys as never, resolve);
-		view.handleInput?.("a");
-		view.handleInput?.("enter");
+		try {
+			if (stages) {
+				const stage = stages.shift();
+				assert.ok(stage, "unexpected custom UI");
+				stage(view);
+			} else {
+				view.handleInput?.("a");
+				view.handleInput?.("enter");
+			}
+		} finally {
+			view.dispose?.();
+		}
 		return promise;
 	}) as ExtensionContext["ui"]["custom"];
 	return { ctx, notifications };
@@ -41,7 +55,7 @@ function commandContext(t: Parameters<typeof sandbox>[0]): { ctx: ExtensionComma
 test("registration does not run any CLI or spawn an agent", () => {
 	const registered = register();
 	assert.deepEqual([...registered.events.keys()], ["session_start"]);
-	assert.deepEqual([...registered.tools.keys()], ["herd_read"]);
+	assert.deepEqual([...registered.tools.keys()], ["herd_read", "herd_start"]);
 	assert.deepEqual([...registered.commands.keys()], ["herd"]);
 	assert.deepEqual(registered.messages, []);
 });
@@ -133,6 +147,164 @@ else console.log(JSON.stringify({ address: 't-self', state: 'live', labels: {} }
 	assert.equal(registered.messages.length, 1);
 	assert.deepEqual(registered.messages[0][1], { deliverAs: "nextTurn" });
 	assert.match(notifications.at(-1)!, /Herd:.*outlive/);
+});
+
+test("herd_start exposes only role recommendations and requires sequential interactive selection", () => {
+	const tool = register().tools.get("herd_start")!;
+	assert.ok(tool);
+	assert.equal(tool.executionMode, "sequential");
+	const schema = tool.parameters as unknown as { properties: Record<string, unknown>; additionalProperties: boolean };
+	assert.deepEqual(Object.keys(schema.properties), ["roles"]);
+	assert.equal(schema.additionalProperties, false);
+});
+
+test("herd_start refuses missing hc or a non-TUI without opening UI or invoking a CLI", async (t) => {
+	const { ctx } = commandContext(t, []);
+	const cli = fakeCLI(t, "throw new Error('must not run');");
+	const tool = register().tools.get("herd_start")!;
+	setEnv(t, "HC_TERMINAL_ID");
+	let result = await tool.execute("call", { roles: ["reviewer"] }, undefined, undefined, ctx as ExtensionToolContext);
+	assert.equal((result.details as { status: string }).status, "unavailable");
+	setEnv(t, "HC_TERMINAL_ID", "t-self");
+	for (const mode of ["rpc", "print", "json"] as const) {
+		ctx.mode = mode;
+		result = await tool.execute("call", { roles: ["reviewer"] }, undefined, undefined, ctx as ExtensionToolContext);
+		assert.equal((result.details as { status: string }).status, "unavailable");
+	}
+	assert.deepEqual(cli.calls(), []);
+});
+
+test("herd_start cancellation or deselection performs no CLI calls, copying, or announcements", async (t) => {
+	setEnv(t, "HC_TERMINAL_ID", "t-self");
+	const cli = fakeCLI(t, "throw new Error('must not run');");
+	for (const keys of [["cancel"], [" ", "enter"]]) {
+		const { ctx } = commandContext(t, [(view) => {
+			assert.match(view.render(300).join("\n"), /\[x\] explorer/);
+			assert.deepEqual(cli.calls(), [], "nothing may launch before Start");
+			keys.forEach((key) => view.handleInput?.(key));
+		}]);
+		ctx.ui.confirm = async () => { throw new Error("tool must not offer to copy templates"); };
+		const registered = register();
+		const result = await registered.tools.get("herd_start")!.execute("call", { roles: ["explorer"] }, undefined, undefined, ctx as ExtensionToolContext);
+		assert.equal((result.details as { status: string }).status, "cancelled");
+		assert.equal(existsSync(join(ctx.cwd, PROJECT_AGENTS_DIR)), false);
+		assert.deepEqual(registered.messages, []);
+	}
+	assert.deepEqual(cli.calls(), []);
+});
+
+test("herd_start respects empty project overrides and rejects unknown or ambiguous recommendations", async (t) => {
+	setEnv(t, "HC_TERMINAL_ID", "t-self");
+	const { ctx } = commandContext(t, []);
+	const cli = fakeCLI(t, "throw new Error('must not run');");
+	const tool = register().tools.get("herd_start")!;
+	const dir = join(ctx.cwd, PROJECT_AGENTS_DIR);
+	mkdirSync(dir, { recursive: true });
+	let result = await tool.execute("call", { roles: ["reviewer"] }, undefined, undefined, ctx as ExtensionToolContext);
+	assert.equal((result.details as { status: string }).status, "no_agents");
+	writeFileSync(join(dir, "one.md"), "---\nname: custom\n---\nRead only.");
+	result = await tool.execute("call", { roles: ["reviewer"] }, undefined, undefined, ctx as ExtensionToolContext);
+	assert.equal((result.details as { status: string }).status, "error");
+	assert.match(JSON.stringify(result.content), /reviewer/);
+	writeFileSync(join(dir, "two.md"), "---\nname: custom\n---\nRead only.");
+	result = await tool.execute("call", { roles: ["custom"] }, undefined, undefined, ctx as ExtensionToolContext);
+	assert.equal((result.details as { status: string }).status, "error");
+	assert.deepEqual(cli.calls(), []);
+});
+
+test("herd_start launches the user's actual role/model/thinking selection, not the recommendation", async (t) => {
+	initTheme("dark", false);
+	setEnv(t, "HC_TERMINAL_ID", "t-self");
+	const cli = fakeCLI(t, `
+if (args[0] === 'ls') console.log(JSON.stringify({ terminals: [] }));
+else if (args[0] === 'run') console.log(JSON.stringify({ address: 't-chosen', state: 'live' }));
+else console.log(JSON.stringify({ address: 't-self', state: 'live', labels: {} }));`);
+	const { ctx } = commandContext(t, [
+		(view) => {
+			assert.deepEqual(cli.calls(), []);
+			for (const key of [" ", "down", " ", "\t"]) view.handleInput?.(key);
+		},
+		(view) => view.handleInput?.("\r"),
+		(view) => {
+			view.handleInput?.("\u001b[Z");
+			view.handleInput?.("enter");
+		},
+	]);
+	const dir = join(ctx.cwd, PROJECT_AGENTS_DIR);
+	mkdirSync(dir, { recursive: true });
+	writeFileSync(join(dir, "one.md"), "---\nname: recommended\n---\nExplore only.");
+	writeFileSync(join(dir, "two.md"), "---\nname: chosen\nthinking: low\n---\nImplement scoped changes.");
+	const registered = register();
+	const result = await registered.tools.get("herd_start")!.execute("call", { roles: ["recommended"] }, undefined, undefined, ctx as ExtensionToolContext);
+	const details = result.details as { status: string; members: { address: string; role: string; model: string; thinking: string }[] };
+	assert.equal(details.status, "started");
+	assert.equal(details.members.length, 1);
+	assert.equal(details.members[0].address, "t-chosen");
+	assert.equal(details.members[0].role, "chosen");
+	assert.equal(details.members[0].model, `${model.provider}/${model.id}`);
+	const runs = cli.calls().filter((call) => call.args[0] === "run");
+	assert.equal(runs.length, 1);
+	assert.equal(runs[0].args[runs[0].args.indexOf("--model") + 1], `${model.provider}/${model.id}`);
+	assert.equal(runs[0].args[runs[0].args.indexOf("--thinking") + 1], details.members[0].thinking);
+	assert.notEqual(details.members[0].thinking, "low", "user changed the template thinking level");
+	assert.ok(runs[0].args.includes("herd.role=chosen"));
+	assert.ok(runs[0].args.includes("herd.parent=t-self"));
+	assert.ok(!runs[0].args.includes("--outlive-parent"));
+	assert.deepEqual(registered.messages, [], "tool result is the current announcement, not a stale next-turn message");
+});
+
+test("herd_start abort before or during selection cannot spawn even if UI subsequently confirms", async (t) => {
+	setEnv(t, "HC_TERMINAL_ID", "t-self");
+	const cli = fakeCLI(t, "throw new Error('must not run');");
+	for (const before of [true, false]) {
+		const controller = new AbortController();
+		const { ctx } = commandContext(t, [(view) => {
+			controller.abort();
+			view.handleInput?.("enter");
+		}]);
+		if (before) controller.abort();
+		const result = await register().tools.get("herd_start")!.execute("call", { roles: ["reviewer"] }, controller.signal, undefined, ctx as ExtensionToolContext);
+		assert.equal((result.details as { status: string }).status, "cancelled");
+	}
+	assert.deepEqual(cli.calls(), []);
+});
+
+test("herd_start reports partial launch failures without retrying or losing created addresses", async (t) => {
+	setEnv(t, "HC_TERMINAL_ID", "t-self");
+	const { ctx } = commandContext(t, [(view) => view.handleInput?.("enter")]);
+	const cli = fakeCLI(t, `
+if (args[0] === 'ls') console.log(JSON.stringify({ terminals: [] }));
+else if (args[0] === 'run') {
+  if (args.includes('herd.role=reviewer')) { console.error('synthetic launch failure'); process.exit(1); }
+  console.log(JSON.stringify({ address: 't-kept', state: 'live' }));
+} else console.log(JSON.stringify({ address: 't-self', state: 'live', labels: {} }));`);
+	const result = await register().tools.get("herd_start")!.execute("call", { roles: ["explorer", "reviewer"] }, undefined, undefined, ctx);
+	const details = result.details as { status: string; members: { address: string }[]; errors: string[] };
+	assert.equal(details.status, "partial");
+	assert.deepEqual(details.members.map((member) => member.address), ["t-kept"]);
+	assert.equal(details.errors.length, 1);
+	assert.equal(cli.calls().filter((call) => call.args[0] === "run").length, 2);
+	assert.match(JSON.stringify(result.content), /do not automatically retry/i);
+});
+
+test("herd_start preserves Herdr space and nested parent identity without renaming the requester's tab", async (t) => {
+	setEnv(t, "HC_TERMINAL_ID", "t-parent");
+	const { ctx } = commandContext(t, [(view) => view.handleInput?.("enter")]);
+	const cli = fakeCLI(t, `
+if (command === 'herdr-app') {
+  if (args[0] === 'ls') console.log(JSON.stringify({ spaces: [{ tabs: [{ id: 'child-tab', terminals: [{ terminal: 't-child' }] }] }] }));
+  else console.log('{}');
+} else if (args[0] === 'ls') console.log(JSON.stringify({ terminals: [] }));
+else if (args[0] === 'run') console.log(JSON.stringify({ address: 't-child', state: 'live' }));
+else console.log(JSON.stringify({ address: 't-parent', state: 'live', labels: { 'herdr.space': 'space-1', 'herdr.tab': 'parent-tab', 'herd.parent': 't-root' } }));`);
+	const result = await register().tools.get("herd_start")!.execute("call", { roles: ["explorer"] }, undefined, undefined, ctx);
+	assert.equal((result.details as { status: string }).status, "started");
+	const calls = cli.calls();
+	const run = calls.find((call) => call.args[0] === "run")!;
+	assert.ok(run.args.includes("herd.parent=t-parent"));
+	assert.ok(run.args.includes("herdr.space=space-1"));
+	assert.ok(calls.some((call) => call.command === "herdr-app" && call.args.includes("child-tab") && call.args.includes("tab.rename")));
+	assert.ok(!calls.some((call) => call.command === "herdr-app" && call.args.includes("parent-tab")));
 });
 
 test("latest pending prompt never falls back to an older completed report, even with stale done status", async (t) => {

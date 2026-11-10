@@ -25,6 +25,10 @@ There is no guaranteed response time or bug-bounty program.
 
 - This is a pi extension, **not a sandbox**. Extension code and spawned pi
   processes run with your user account's filesystem and command permissions.
+- `herd_start` gates this extension's launches behind a user-operated picker;
+  it has no headless/direct-spawn fallback. The skill requires chat approval
+  before opening it. This is not a sandbox preventing an agent with shell
+  access from launching other programs; normal permissions and trust still apply.
 - Agent template bodies become system-prompt instructions. Project templates,
   skills, extensions, and package declarations must be reviewed before you trust
   them. A role saying “read-only” is not an enforced permission restriction.

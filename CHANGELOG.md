@@ -7,9 +7,16 @@
 - MIT license, installation and quickstart guide, contributor instructions,
   security policy, and issue templates for the public repository.
 - Automated release-readiness checks and regression coverage.
+- `herd_start` opens the existing `/herd` picker after a team proposal is approved.
+  Recommended roles are preselected; the user chooses the final team, models,
+  and thinking levels before Start. Cancellation/headless refusal never falls
+  back to direct spawning. Both entry points share the picker and launcher.
 
 ### Changed
 
+- Route orchestrator and approved sub-agent helper requests through the picker
+  instead of model-authored CLI launches. Return actual selections and partial
+  launch failures without stale next-turn announcements from tool calls.
 - Document the current hc-based architecture, shared-directory safety limits,
   model configuration, lifecycle, and development requirements.
 - Let bundled roles inherit the user's default model instead of requiring

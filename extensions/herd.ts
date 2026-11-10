@@ -1,10 +1,10 @@
 import { existsSync, mkdtempSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { type AgentToolResult, type ExtensionAPI, type ExtensionCommandContext, truncateHead } from "@earendil-works/pi-coding-agent";
+import { type AgentToolResult, type ExtensionAPI, type ExtensionContext, truncateHead } from "@earendil-works/pi-coding-agent";
 import { type AgentTemplate, copyShippedAgents, loadAgents, PROJECT_AGENTS_DIR, SHIPPED_AGENTS_DIR } from "../src/agents.ts";
 import { Type } from "typebox";
-import { getTerminal, liveTerminals, renameTab, runBackground, setLabels, type Terminal, tabOf } from "../src/hc.ts";
+import { getTerminal, liveTerminals, renameTab, runBackground, setLabels, tabOf } from "../src/hc.ts";
 import { modelRef } from "../src/models.ts";
 import { pickAgents } from "../src/picker.ts";
 import { readPromptReplies } from "../src/session.ts";
@@ -57,9 +57,10 @@ async function nameTabWhenAdopted(address: string, name: string): Promise<boolea
 }
 
 /** Project agents if the project has them; otherwise offer to copy the shipped ones in. */
-async function chooseAgents(ctx: ExtensionCommandContext): Promise<{ agents: AgentTemplate[]; source: string }> {
+async function chooseAgents(ctx: ExtensionContext, offerCopy: boolean): Promise<{ agents: AgentTemplate[]; source: string }> {
 	const projectDir = join(ctx.cwd, PROJECT_AGENTS_DIR);
 	if (existsSync(projectDir)) return { agents: loadAgents(projectDir), source: PROJECT_AGENTS_DIR };
+	if (!offerCopy) return { agents: loadAgents(SHIPPED_AGENTS_DIR), source: "shipped agents" };
 
 	const copy = await ctx.ui.confirm(
 		"No herd agents in this project",
@@ -70,6 +71,111 @@ async function chooseAgents(ctx: ExtensionCommandContext): Promise<{ agents: Age
 	const n = copyShippedAgents(projectDir);
 	ctx.ui.notify(`Copied ${n} agent${n === 1 ? "" : "s"} to ${PROJECT_AGENTS_DIR}/`, "info");
 	return { agents: loadAgents(projectDir), source: PROJECT_AGENTS_DIR };
+}
+
+interface HerdMember {
+	name: string;
+	address: string;
+	role: string;
+	template: string;
+	model?: string;
+	thinking?: string;
+}
+
+interface HerdStartDetails {
+	status: "started" | "partial" | "cancelled" | "unavailable" | "no_agents" | "error";
+	members: HerdMember[];
+	errors: string[];
+	source?: string;
+	outputFile?: string;
+}
+
+function startResult(status: HerdStartDetails["status"], text: string, members: HerdMember[] = [], errors: string[] = [], source?: string): AgentToolResult<HerdStartDetails> {
+	const truncation = truncateHead(text);
+	let outputFile: string | undefined;
+	if (truncation.truncated) {
+		outputFile = join(mkdtempSync(join(tmpdir(), "herd-start-")), "members.md");
+		writeFileSync(outputFile, text, { mode: 0o600 });
+	}
+	return {
+		content: [{ type: "text", text: truncation.content + (outputFile ? `\n\n[Output truncated. Full member list saved to: ${outputFile}]` : "") }],
+		details: { status, members, errors, source, outputFile },
+	};
+}
+
+/** Both entry points must go through the same user-operated picker before launching. */
+async function startHerd(ctx: ExtensionContext, options: { recommended?: string[]; outlive?: boolean; offerCopy?: boolean; signal?: AbortSignal } = {}): Promise<AgentToolResult<HerdStartDetails>> {
+	const { signal } = options;
+	if (signal?.aborted) return startResult("cancelled", "Herd selection cancelled; no agents started.");
+	const self = process.env.HC_TERMINAL_ID;
+	if (!self) return startResult("unavailable", "Herd launch needs to run inside a herdr-core (hc) terminal; no agents started. Do not fall back to direct CLI spawning.");
+	if (ctx.mode !== "tui" || !ctx.hasUI)
+		return startResult("unavailable", "Herd launch needs interactive mode for the picker; no agents started. Do not fall back to direct CLI spawning.");
+
+	try {
+		const { agents, source } = await chooseAgents(ctx, options.offerCopy ?? false);
+		if (signal?.aborted) return startResult("cancelled", "Herd selection cancelled; no agents started.");
+		if (!agents.length) return startResult("no_agents", `No agent templates (*.md) in ${source}; no agents started.`, [], [], source);
+		const invalid = options.recommended?.filter((role) => agents.filter((agent) => agent.name === role).length !== 1);
+		if (invalid?.length)
+			return startResult("error", `Unknown or ambiguous recommended roles: ${invalid.join(", ")}. Available roles: ${agents.map((agent) => agent.name).join(", ")}. No agents started.`, [], [], source);
+
+		const picked = await pickAgents(ctx, agents, source, { recommended: options.recommended, signal });
+		if (!picked.length || signal?.aborted) return startResult("cancelled", "Herd selection cancelled; no agents started.", [], [], source);
+
+		// No CLI calls or tab changes happen before the user presses Start.
+		const me = await getTerminal(self, signal);
+		const space = me.labels?.["herdr.space"];
+		const taken = new Set((await liveTerminals()).map((t) => t.name).filter((n): n is string => !!n));
+		if (signal?.aborted) return startResult("cancelled", "Herd launch cancelled before starting any agents.", [], [], source);
+		const myTab = me.labels?.["herdr.tab"] ?? (space ? await tabOf(self).catch(() => undefined) : undefined);
+		if (signal?.aborted) return startResult("cancelled", "Herd launch cancelled before starting any agents.", [], [], source);
+		if (myTab && !me.labels?.["herd.parent"]) await renameTab(myTab, ORCHESTRATOR_TAB).catch(() => {});
+		if (signal?.aborted) return startResult("cancelled", "Herd launch cancelled before starting any agents.", [], [], source);
+
+		const errors: string[] = [];
+		const started = await Promise.all(picked.map(async ({ agent, model, thinking }) => {
+			const name = uniqueName(agent.name, taken);
+			const piArgs = ["--name", name, "--append-system-prompt", systemPrompt(agent, name, self)];
+			// Only settings returned by the user's picker may become launch arguments.
+			if (model) piArgs.push("--model", modelRef(model));
+			if (thinking) piArgs.push("--thinking", thinking);
+			try {
+				const t = await runBackground({
+					name, cwd: ctx.cwd,
+					labels: {
+						...(space && { "herdr.space": space }),
+						"herd.parent": self, "herd.role": agent.name, "herd.template": agent.file,
+					},
+					outliveParent: options.outlive ?? false,
+					argv: ["env", `PATH=${process.env.PATH ?? ""}`, "pi", ...piArgs],
+				});
+				const tabbed = space ? await nameTabWhenAdopted(t.address, name).catch(() => false) : false;
+				if (space && !tabbed) ctx.ui.notify(`${name} (${t.address}) started, but its tab wasn't found to rename`, "warning");
+				return { name, address: t.address, role: agent.name, template: agent.file, model: model ? modelRef(model) : undefined, thinking };
+			} catch (e) {
+				const error = `${name}: ${(e as Error).message}`;
+				errors.push(error);
+				ctx.ui.notify(error, "error");
+				return undefined;
+			}
+		}));
+		const members = started.filter((s) => s !== undefined);
+		if (!members.length) return startResult("error", `No agents confirmed started. Do not blindly retry; a failed launch may have started a process.\n${errors.join("\n")}`, [], errors, source);
+		ctx.ui.notify(`Herd: ${members.map((s) => `${s.name} (${s.address})`).join(", ")}${options.outlive ? " · outlive" : ""}`, "info");
+		const text = [
+			`Herd started from this pi (${self}). Members, reachable with hc (see the herd-my-pi skill):`,
+			...members.map((s) => `- ${s.name} (${s.address}): ${s.role} [${s.template}] · model: ${s.model ?? "configured default"} · thinking: ${s.thinking ?? "configured default"}`),
+			"",
+			"Use these members within the approved task, according to their templates. Assign state-card briefs after startup readiness; do not message blocked members.",
+			"The user's final picker selection is authoritative; adapt assignments if it differs from the recommendation. Read answers with herd_read.",
+			...(errors.length ? ["Some launches failed; do not automatically retry or replace them:", ...errors] : []),
+		].join("\n");
+		return startResult(errors.length ? "partial" : "started", text, members, errors, source);
+	} catch (e) {
+		if (signal?.aborted) return startResult("cancelled", "Herd launch cancelled before starting any agents.");
+		return startResult("error", `Herd launch failed: ${(e as Error).message}. No agents confirmed started; do not blindly retry.`);
+	}
 }
 
 export default function (pi: ExtensionAPI) {
@@ -173,89 +279,38 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
+	pi.registerTool({
+		name: "herd_start",
+		label: "Start herd",
+		description: "Open the /herd picker with recommended roles preselected. The user chooses roles, models, and thinking levels; only pressing Start launches agents. Cancel creates nothing. Interactive TUI only; no CLI fallback. Returns actual member addresses and settings. Output is capped at 50 KiB or 2000 lines; longer lists are saved privately.",
+		promptSnippet: "Open the herd picker after the user approves a proposed team",
+		promptGuidelines: [
+			"Use herd_start only after proposing a task-appropriate team and getting the person's approval to open the picker. Recommend role names, not model or thinking overrides; the person controls those in the picker.",
+			"Never replace a cancelled or unavailable herd_start picker with direct hc run or another spawning mechanism. Do not automatically retry failed or partial launches.",
+		],
+		executionMode: "sequential",
+		exposure: "model-only",
+		parameters: Type.Object({
+			roles: Type.Array(Type.String({ minLength: 1 }), { minItems: 1, uniqueItems: true, description: "Exact template names to recommend. The user may change this selection before Start." }),
+		}, { additionalProperties: false }),
+		async execute(_id, params, signal, _onUpdate, ctx): Promise<AgentToolResult<HerdStartDetails>> {
+			return startHerd(ctx, { recommended: params.roles, signal });
+		},
+	});
+
 	pi.registerCommand("herd", {
 		description: "Start sub-agents from templates, each in its own Herdr tab (--outlive: keep them after this pi ends)",
 		getArgumentCompletions: (prefix) =>
 			"--outlive".startsWith(prefix) ? [{ value: "--outlive", label: "--outlive" }] : null,
 		handler: async (args, ctx) => {
-			const outlive = args.split(/\s+/).includes("--outlive");
-			const self = process.env.HC_TERMINAL_ID;
-			if (!self) return ctx.ui.notify("/herd needs to run inside a herdr-core (hc) terminal", "error");
-			if (ctx.mode !== "tui") return ctx.ui.notify("/herd needs interactive mode", "error");
-
-			let me: Terminal;
-			try {
-				me = await getTerminal(self);
-			} catch (e) {
-				return ctx.ui.notify(`Can't reach hc: ${(e as Error).message}`, "error");
+			const result = await startHerd(ctx, { outlive: args.split(/\s+/).includes("--outlive"), offerCopy: true });
+			const text = result.content.filter((part) => part.type === "text").map((part) => part.text).join("\n");
+			if (result.details.status === "started" || result.details.status === "partial") {
+				// Commands announce on the next turn; the tool returns its result immediately.
+				pi.sendMessage({ customType: "herd", display: true, content: text }, { deliverAs: "nextTurn" });
+			} else if (result.details.status !== "cancelled") {
+				ctx.ui.notify(text, result.details.status === "no_agents" ? "warning" : "error");
 			}
-			// Without a Herdr space the agents still run, as hidden sub-agents of this terminal.
-			const space = me.labels?.["herdr.space"];
-			// Only terminals Herdr itself started carry herdr.tab; hc-started ones are found by address.
-			const myTab = me.labels?.["herdr.tab"] ?? (space ? await tabOf(self).catch(() => undefined) : undefined);
-			if (myTab) await renameTab(myTab, ORCHESTRATOR_TAB).catch(() => {});
-
-			const { agents, source } = await chooseAgents(ctx);
-			if (!agents.length) return ctx.ui.notify(`No agent templates (*.md) in ${source}`, "warning");
-
-			const picked = await pickAgents(ctx, agents, source);
-			if (!picked.length) return;
-
-			const taken = new Set((await liveTerminals()).map((t) => t.name).filter((n): n is string => !!n));
-			const started = await Promise.all(
-				picked.map(async ({ agent, model, thinking }) => {
-					const name = uniqueName(agent.name, taken);
-					const piArgs = ["--name", name, "--append-system-prompt", systemPrompt(agent, name, self)];
-					// The exact model the picker resolved, so the sub-agent can't resolve the pattern differently.
-					if (model) piArgs.push("--model", modelRef(model));
-					if (thinking) piArgs.push("--thinking", thinking);
-					try {
-						const t = await runBackground({
-							name,
-							cwd: ctx.cwd,
-							labels: {
-								...(space && { "herdr.space": space }),
-								"herd.parent": self,
-								"herd.role": agent.name,
-								"herd.template": agent.file,
-							},
-							outliveParent: outlive,
-							// hc terminals get the login environment, which may lack pi's node on PATH.
-							argv: ["env", `PATH=${process.env.PATH ?? ""}`, "pi", ...piArgs],
-						});
-						const tabbed = space ? await nameTabWhenAdopted(t.address, name).catch(() => false) : false;
-						return { agent, name, address: t.address, tabbed };
-					} catch (e) {
-						ctx.ui.notify(`${name}: ${(e as Error).message}`, "error");
-						return undefined;
-					}
-				}),
-			);
-
-			const herd = started.filter((s) => s !== undefined);
-			if (!herd.length) return;
-			for (const s of herd)
-				if (space && !s.tabbed) ctx.ui.notify(`${s.name} (${s.address}) started, but its tab wasn't found to rename`, "warning");
-			ctx.ui.notify(
-				`Herd: ${herd.map((s) => `${s.name} (${s.address})`).join(", ")}${outlive ? " · outlive" : ""}`,
-				"info",
-			);
-
-			// Tell the orchestrator model who it can delegate to, on its next turn.
-			pi.sendMessage(
-				{
-					customType: "herd",
-					display: true,
-					content: [
-						`Herd started from this pi (${self}). Members, reachable with hc (see the herd-my-pi skill):`,
-						...herd.map((s) => `- ${s.name} (${s.address}): ${s.agent.description || s.agent.name} [${s.agent.file}]`),
-						"",
-						"On every prompt from the person, use the herd as you see fit, according to what each member is for",
-						"(its template file above), with as little back and forth as possible. Read answers with herd_read.",
-					].join("\n"),
-				},
-				{ deliverAs: "nextTurn" },
-			);
 		},
 	});
 }
