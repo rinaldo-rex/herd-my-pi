@@ -2,9 +2,11 @@ import { existsSync } from "node:fs";
 import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { type AgentTemplate, copyShippedAgents, loadAgents, PROJECT_AGENTS_DIR, SHIPPED_AGENTS_DIR } from "../src/agents.ts";
-import { getTerminal, liveTerminals, renameTab, runBackground, type Terminal, tabOf } from "../src/hc.ts";
+import { Type } from "typebox";
+import { getTerminal, liveTerminals, renameTab, runBackground, setLabels, type Terminal, tabOf } from "../src/hc.ts";
 import { modelRef } from "../src/models.ts";
 import { pickAgents } from "../src/picker.ts";
+import { lastReplies } from "../src/session.ts";
 
 const ORCHESTRATOR_TAB = "Orchestrator";
 
@@ -57,6 +59,44 @@ async function chooseAgents(ctx: ExtensionCommandContext): Promise<{ agents: Age
 }
 
 export default function (pi: ExtensionAPI) {
+	// Publish this pi's session file on its terminal so herd members can herd_read it.
+	// session_start also fires after /new, /resume and forks, which change the file.
+	pi.on("session_start", async (_event, ctx) => {
+		const self = process.env.HC_TERMINAL_ID;
+		const file = ctx.sessionManager.getSessionFile();
+		if (self && file) await setLabels(self, { "herd.session": file }).catch(() => {});
+	});
+
+	pi.registerTool({
+		name: "herd_read",
+		label: "Herd read",
+		description:
+			"Read a herd member's latest replies straight from its pi session: complete text, not a screen capture. " +
+			"Works on finished members too.",
+		promptSnippet: "Read another herd member's last replies from its pi session",
+		promptGuidelines: [
+			"Use herd_read to get a herd member's answer after it reports done; use hc read only to see what it is doing right now.",
+		],
+		parameters: Type.Object({
+			member: Type.String({ description: "The member's hc name (e.g. reviewer) or address (e.g. t1x)" }),
+			last: Type.Optional(
+				Type.Integer({ minimum: 1, maximum: 10, description: "How many recent replies, oldest first (default 1)" }),
+			),
+		}),
+		async execute(_id, params) {
+			const member = await getTerminal(params.member);
+			const file = member.labels?.["herd.session"];
+			if (!file)
+				throw new Error(`${params.member} (${member.address}) hasn't published a pi session; is herd-my-pi loaded in it?`);
+			const replies = lastReplies(file, params.last ?? 1);
+			const who = `${member.name ?? member.address} (${member.address}, ${member.state})`;
+			const text = replies.length
+				? replies.map((r, i) => `## ${who}, reply ${replies.length - i} from the end\n\n${r}`).join("\n\n")
+				: `${who} has no finished replies yet.`;
+			return { content: [{ type: "text", text }], details: { member: member.address, file, count: replies.length } };
+		},
+	});
+
 	pi.registerCommand("herd", {
 		description: "Start sub-agents from templates, each in its own Herdr tab (--outlive: keep them after this pi ends)",
 		getArgumentCompletions: (prefix) =>
@@ -128,6 +168,9 @@ export default function (pi: ExtensionAPI) {
 					content: [
 						`Herd started from this pi (${self}). Members, reachable with hc (see the herd-my-pi skill):`,
 						...herd.map((s) => `- ${s.name} (${s.address}): ${s.agent.description || s.agent.name}`),
+						"",
+						"Offload to them: delegate research, reviews and scoped changes that fit a member, in parallel when independent,",
+						"and read their answers with herd_read. Do it yourself only for a single quick lookup.",
 					].join("\n"),
 				},
 				{ deliverAs: "nextTurn" },

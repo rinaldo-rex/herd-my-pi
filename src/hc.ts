@@ -37,6 +37,10 @@ export const getTerminal = (t: string) => json<Terminal>("hc", ["get", t, "--jso
 export const liveTerminals = async () =>
 	(await json<{ terminals: Terminal[] }>("hc", ["ls", "--json"])).terminals;
 
+export async function setLabels(t: string, labels: Record<string, string>): Promise<void> {
+	await json("hc", ["label", t, "--json", ...Object.entries(labels).map(([k, v]) => `${k}=${v}`)]);
+}
+
 export interface RunOptions {
 	name: string;
 	cwd: string;
