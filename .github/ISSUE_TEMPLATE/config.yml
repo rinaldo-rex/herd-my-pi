@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security reporting policy
+    url: https://github.com/rinaldo-rex/herd-my-pi/blob/main/SECURITY.md
+    about: Read this before reporting vulnerabilities. Do not post security details publicly.

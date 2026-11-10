@@ -25,10 +25,14 @@ interface ListState {
 }
 
 export async function pickAgents(ctx: ExtensionContext, agents: AgentTemplate[], source: string): Promise<HerdChoice[]> {
+	if (!agents.length) return [];
 	const state: ListState = {
 		choices: agents.map((agent) => {
-			const { model, error } = agent.model ? resolveModel(ctx, agent.model) : {};
-			return { agent, model, modelError: error, thinking: agent.thinking as ThinkingLevel | undefined };
+			if (agent.thinking && !levelsFor().includes(agent.thinking as ThinkingLevel))
+				throw new Error(`${agent.file}: invalid thinking level "${agent.thinking}"`);
+			const { model, error, thinking: modelThinking } = agent.model ? resolveModel(ctx, agent.model) : {};
+			const thinking = (agent.thinking as ThinkingLevel | undefined) ?? modelThinking;
+			return { agent, model, modelError: error, thinking: model && thinking ? clampThinking(model, thinking) : thinking };
 		}),
 		checked: new Set(),
 		cursor: 0,
@@ -139,15 +143,13 @@ function chooseModel(ctx: ExtensionContext, choice: HerdChoice): Promise<void> {
 		view.addChild(header);
 		view.addChild(selector);
 		// The selector has a search input: forward focus so typing and IME land in it.
+		Object.defineProperty(view, "focused", {
+			get: () => selector.focused,
+			set: (v: boolean) => { selector.focused = v; },
+		});
 		return Object.assign(view, {
-			get focused() {
-				return selector.focused;
-			},
-			set focused(v: boolean) {
-				selector.focused = v;
-			},
 			handleInput: (data: string) => selector.handleInput(data),
 			dispose: () => selector.dispose(),
 		});
-	});
+	}, { blocked: { kind: "question", message: `Pick a model for ${choice.agent.name}` } });
 }

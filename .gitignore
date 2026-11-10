@@ -2,3 +2,15 @@ node_modules/
 .pi/
 *.log
 *.tmp.*
+
+# Local credentials (commit sanitized examples only).
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Generated artifacts.
+coverage/
+*.tgz
+*.tsbuildinfo
+.DS_Store

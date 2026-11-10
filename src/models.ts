@@ -23,9 +23,9 @@ export function runtimeOf(ctx: ExtensionContext): ModelRuntime {
 }
 
 /** Resolves a template's model the way `pi --model <pattern>` will in the sub-agent. */
-export function resolveModel(ctx: ExtensionContext, pattern: string): { model?: Model<Api>; error?: string } {
+export function resolveModel(ctx: ExtensionContext, pattern: string): { model?: Model<Api>; thinking?: ThinkingLevel; error?: string } {
 	const r = resolveCliModel({ cliModel: pattern, modelRuntime: runtimeOf(ctx) });
-	return r.model ? { model: r.model } : { error: r.error ?? `Model "${pattern}" not found` };
+	return r.model ? { model: r.model, thinking: r.thinkingLevel } : { error: r.error ?? `Model "${pattern}" not found` };
 }
 
 /** The levels pi's own shift+tab cycles through for this model. */

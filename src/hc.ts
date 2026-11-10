@@ -13,14 +13,20 @@ function errorMessage(text: string): string | undefined {
 	}
 }
 
-async function json<T>(cmd: string, args: string[]): Promise<T> {
+async function json<T>(cmd: string, args: string[], signal?: AbortSignal): Promise<T> {
 	try {
-		const { stdout } = await run(cmd, args, { maxBuffer: 16 * 1024 * 1024 });
+		const { stdout } = await run(cmd, args, {
+			maxBuffer: 16 * 1024 * 1024,
+			timeout: cmd === "hc" && args[0] === "run" ? 90_000 : 10_000,
+			killSignal: "SIGKILL",
+			signal,
+		});
 		return JSON.parse(stdout) as T;
 	} catch (e) {
-		const err = e as { stdout?: string; stderr?: string; message: string };
-		const text = `${err.stderr ?? ""}${err.stdout ?? ""}`.trim();
-		throw new Error(`${cmd} ${args[0]}: ${errorMessage(text) ?? (text || err.message)}`);
+		const err = e as { stdout?: string; stderr?: string; message: string; killed?: boolean; signal?: string };
+		const text = `${err.stderr ?? ""}\n${err.stdout ?? ""}`.trim();
+		const fallback = err.killed && err.signal === "SIGKILL" ? "command timed out or was terminated" : err.message;
+		throw new Error(`${cmd} ${args[0]}: ${errorMessage(text) ?? (text || fallback)}`);
 	}
 }
 
@@ -34,7 +40,7 @@ export interface Terminal {
 	labels?: Record<string, string>;
 }
 
-export const getTerminal = (t: string) => json<Terminal>("hc", ["get", t, "--json"]);
+export const getTerminal = (t: string, signal?: AbortSignal) => json<Terminal>("hc", ["get", t, "--json"], signal);
 
 export const liveTerminals = async () =>
 	(await json<{ terminals: Terminal[] }>("hc", ["ls", "--json"])).terminals;
