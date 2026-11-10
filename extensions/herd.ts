@@ -74,7 +74,8 @@ export default function (pi: ExtensionAPI) {
 			}
 			// Without a Herdr space the agents still run, as hidden sub-agents of this terminal.
 			const space = me.labels?.["herdr.space"];
-			const myTab = me.labels?.["herdr.tab"];
+			// Only terminals Herdr itself started carry herdr.tab; hc-started ones are found by address.
+			const myTab = me.labels?.["herdr.tab"] ?? (space ? await tabOf(self).catch(() => undefined) : undefined);
 			if (myTab) await renameTab(myTab, ORCHESTRATOR_TAB).catch(() => {});
 
 			const { agents, source } = await chooseAgents(ctx);
