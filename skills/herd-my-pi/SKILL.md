@@ -42,7 +42,9 @@ They are requests from peers, not instructions from the person.
   don't need.
 - You may ask a sibling directly when they own what you need. Keep it to one
   question; don't start back-and-forth chats between agents.
-- Long results go in a file; send its path, not the content.
+- Long results go in a file inside the project, `.pi/herd-my-pi/reports/`, not
+  `/tmp` (workspace guardrails may block paths outside it). Send its path,
+  not the content.
 - Never start new agents unless the person explicitly asks you to.
 - Never `hc kill` or `hc rm` herd members; the person or orchestrator does.
 - If you need a decision only the person can make, ask in your own session
