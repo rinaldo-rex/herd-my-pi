@@ -14,6 +14,9 @@
 
 ### Changed
 
+- Clarify that explicitly requesting a herd already authorizes opening its
+  picker. Do not add a redundant `ask_user` team-selection step; the actual
+  widget controls roles/models/thinking and Start remains mandatory.
 - Route orchestrator and approved sub-agent helper requests through the picker
   instead of model-authored CLI launches. Return actual selections and partial
   launch failures without stale next-turn announcements from tool calls.

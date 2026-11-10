@@ -6,8 +6,9 @@ through herdr-core (`hc`). Every member is a normal pi session—not an opaque
 background tool.
 
 **Status:** early-stage, version 0.2.0. Review changes before using this on
-valuable work. See [limitations](#limitations-and-safety) and the
-[changelog](CHANGELOG.md).
+valuable work. Recent changes on `main`, including the agent-opened picker,
+are listed under **Unreleased** in the [changelog](CHANGELOG.md); the package
+manifest version has not yet been bumped. See [limitations](#limitations-and-safety).
 
 ## Requirements
 
@@ -55,6 +56,9 @@ There is no npm release assumed by these instructions.
    or bundled roles and proposes a team with scoped assignments.
 3. Approve or correct the proposal. After approval, the agent calls `herd_start`
    to open the same picker as `/herd`, with recommended roles preselected.
+   An explicit request such as “Open a read-only herd” already authorizes opening
+   it: the agent briefly recommends roles and opens the widget without a second
+   confirmation or an `ask_user` agent-selection questionnaire.
 4. Use **↑/↓** to move and **space** to change members. **Tab** opens pi's model
    picker; choose a model you can use. **Shift+Tab** cycles thinking levels.
    Press **Enter** to start the final selection, or **Esc** to cancel.
@@ -101,7 +105,9 @@ suffixes when another live terminal already has the same name.
 
 `herd_start` accepts `roles`, an array of exact template names to recommend.
 It does **not** accept model/thinking overrides or a flag to skip confirmation.
-You can change any selection in the picker; only pressing Start launches it.
+Role, model, and thinking selection belongs in this widget, not a separate
+`ask_user` questionnaire. You can change any selection; only pressing Start
+launches it, even when you already asked the agent to open a herd.
 The result returns the actual roles, addresses, template paths, and settings.
 Leaving a setting at default uses pi's configured default, not necessarily the
 orchestrator's current setting.

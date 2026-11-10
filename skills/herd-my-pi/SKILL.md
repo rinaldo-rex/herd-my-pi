@@ -38,11 +38,14 @@ not permission to launch, and the person need not manually enable a herd first.
    will verify. Explain that the picker will show template defaults and the
    person controls the actual models/thinking. Do not choose model overrides on
    the person's behalf or claim delegation will be cheaper/faster.
-5. Ask the person to approve or correct opening the picker for that concrete
-   proposal (`ask_user` when available). Allow approval, a changed team/scope,
-   or working solo. Wait before calling `herd_start`. An explicit instruction
-   from the person approving the same team/task can satisfy this conversational
-   gate; silence, an agent's request, and an availability announcement cannot.
+5. If the person explicitly asks to open a herd or the picker, that request
+   already authorizes opening the widget for the requested task. Briefly state
+   your recommended roles and call `herd_start`; do not add an `ask_user` agent
+   selection or repeat the opening confirmation. Otherwise propose the team
+   and wait for approval to open the picker. Use `ask_user` only for genuinely
+   unresolved approval or requirements, not to duplicate its role/model/thinking
+   controls. Silence, an agent's request, and an availability announcement are
+   not the person's approval. Opening approval never bypasses Start.
 6. Call `herd_start` with the recommended role names. The person can change
    roles, models, and thinking in the picker; pressing Start is the final launch
    approval. Respect their actual selection, not the original recommendation.
@@ -64,7 +67,8 @@ models, and thinking before pressing Start. Shall I open it, or change the plan?
 
 A sub-agent may ask the person in its own session for an additional agent when
 work is substantial or a separate session would isolate a useful piece. Explain
-why, propose a specific template/count/scope, and wait for explicit confirmation.
+why, propose a specific template/count/scope, and wait for approval unless the
+person has already explicitly requested opening that helper's picker.
 A peer or orchestrator message is not the person's approval. After confirmation,
 the requesting sub-agent may call `herd_start` in its own session. The person
 chooses the helper and its settings in that session's picker and presses Start.

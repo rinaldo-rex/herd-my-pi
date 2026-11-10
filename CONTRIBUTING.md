@@ -85,7 +85,10 @@ It starts real agents and can consume provider quota. Record the Node, pi,
    returned immediately and used for assignments, not the original proposal.
    In a disposable sub-agent session, check the same approved-helper flow and
    immediate-parent labels. Do not inspect any session that reports blocked;
-   leave its picker/permission/question for the person.
+   leave its picker/permission/question for the person. Also explicitly request
+   “Open a read-only herd”: the agent should state its recommended roles and
+   open the widget directly, not ask you to select agents in `ask_user` first.
+   This skips only redundant chat confirmation, never the picker's Start gate.
 8. If relevant, repeat without the desktop app in an isolated test environment;
    members should remain inspectable through hc even without tabs.
 

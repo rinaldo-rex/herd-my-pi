@@ -36,8 +36,9 @@ The fix preserves empty/latest prompts, separates current and historical modes,
 and exposes readiness plus prompt identity. Additional cases cover unknown or
 abandoned cursors, legacy identity stability, unavailable runner completion,
 empty final responses, inaccessible blocked files, and long-output recovery.
-The final frozen snapshot passed **48/48 product tests**, typechecking, and
-validation of the **16-file release archive**, independently verified by the
+That earlier frozen reader-fix snapshot passed **48/48 product tests**,
+typechecking, and validation of the **16-file release archive**, independently
+verified by the
 reviewer. The suite had 31 tests before this workflow-reliability pass.
 
 Run the product checks without starting real agents:
@@ -120,6 +121,31 @@ tests, no persistence-versus-fresh-agent comparison, and no full multi-agent
 handoff workload. Condition A is already a strong brief; condition B tests an
 additional requirements summary, not every possible state-card design. A null
 result is useful and must not be presented as a token, speed, or supervision win.
+
+## Later live picker demonstration
+
+This was a separate integration demonstration, **not** the six-trial A/B pilot.
+The repository remained clean at commit `b92e29a` before and after the demo.
+
+- `herd_start` opened the real picker with explorer and reviewer recommended.
+- The person selected DeepSeek V4.1 Flash for explorer and GLM 5.3 Flash for
+  reviewer, both with high thinking, replacing the project templates' defaults.
+- The tool returned those actual settings and member addresses. Both members
+  completed scoped read-only source inspections; their current `ready` reports
+  were collected after runner turn completion. No repository changes were made.
+- One redundant `ask_user` team-selection question preceded the picker. The
+  person corrected this: an explicit request to open a herd already authorizes
+  opening the widget. The skill now makes that distinction explicit; Start is
+  still required to authorize launches.
+
+The picker implementation had passed **58 tests**, typechecking, and 16-file
+package validation before that commit. Tests were not rerun during the live
+demo. Cancellation, headless refusal, partial failure, nested helpers, lifetime
+cleanup, and the complete manual smoke checklist were **not** exercised live;
+the demo is not evidence that those paths passed integration testing. Exact
+host-version commands were not captured during the demo. No timing, cost, or
+reduced-supervision benefit is inferred, and the earlier A/B dataset remains
+incomplete.
 
 ## Adopted protocol changes
 
