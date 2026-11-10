@@ -3,6 +3,7 @@ import { join } from "node:path";
 import type { ExtensionAPI, ExtensionCommandContext } from "@earendil-works/pi-coding-agent";
 import { type AgentTemplate, copyShippedAgents, loadAgents, PROJECT_AGENTS_DIR, SHIPPED_AGENTS_DIR } from "../src/agents.ts";
 import { getTerminal, liveTerminals, renameTab, runBackground, type Terminal, tabOf } from "../src/hc.ts";
+import { modelRef } from "../src/models.ts";
 import { pickAgents } from "../src/picker.ts";
 
 const ORCHESTRATOR_TAB = "Orchestrator";
@@ -86,11 +87,12 @@ export default function (pi: ExtensionAPI) {
 
 			const taken = new Set((await liveTerminals()).map((t) => t.name).filter((n): n is string => !!n));
 			const started = await Promise.all(
-				picked.map(async (agent) => {
+				picked.map(async ({ agent, model, thinking }) => {
 					const name = uniqueName(agent.name, taken);
 					const piArgs = ["--name", name, "--append-system-prompt", systemPrompt(agent, name, self)];
-					if (agent.model) piArgs.push("--model", agent.model);
-					if (agent.thinking) piArgs.push("--thinking", agent.thinking);
+					// The exact model the picker resolved, so the sub-agent can't resolve the pattern differently.
+					if (model) piArgs.push("--model", modelRef(model));
+					if (thinking) piArgs.push("--thinking", thinking);
 					try {
 						const t = await runBackground({
 							name,
